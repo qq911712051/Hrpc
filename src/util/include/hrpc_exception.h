@@ -4,8 +4,8 @@
  * @description: 
  * @Date: 2019-03-22 18:37:55
  */
-#ifndef HRPC_EX_H_
-#define HRPC_EX_H_
+#ifndef HRPC_EXCEPTION_H_
+#define HRPC_EXCEPTION_H_
 
 #include <exception>
 #include <string>

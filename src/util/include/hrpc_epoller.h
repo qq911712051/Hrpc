@@ -10,12 +10,27 @@
 #include <sys/socket.h>
 #include <sys/epoll.h>
 #include <unistd.h>
+#include <hrpc_exception.h>
+#include <cassert>
 /**
  * @description: 封装epoll的相关操作 
  */
 
 namespace Hrpc
 {
+
+
+/**
+ * @description:  epoller异常实现
+ */
+class Hrpc_EpollerException : public Hrpc_Exception
+{
+public:
+    Hrpc_EpollerException(const std::string& str) : Hrpc_Exception(str) {}                 
+    Hrpc_EpollerException(const std::string& str, int code) : Hrpc_Exception(str, code) {}  
+    ~Hrpc_EpollerException() {}
+};
+
 class Hrpc_Epoller
 {
 public:
@@ -52,7 +67,7 @@ public:
      *         新内核忽略这个参数
      * @return: 是否成功创建
      */
-    bool createEpoll(size_t conn_num);
+    void createEpoll(size_t conn_num);
 
     /**
      * @description: 添加描述符到epoll中
@@ -74,6 +89,17 @@ public:
      * @return: 
      */
     void del(int fd, uint64_t data = 0, uint32_t event = 0);
+
+    /**
+     * @description:  获取通知事件
+     * @param: pos 事件的位置 
+     * @return: 返回相应位置的事件
+     */
+    epoll_event get(size_t pos) const
+    {
+        assert(pos < _max_connection);
+        return _pEvents[pos]; 
+    }
 private:
 
     /**
@@ -81,7 +107,7 @@ private:
      */
     Hrpc_Epoller(const Hrpc_Epoller&);
     Hrpc_Epoller& operator=(const Hrpc_Epoller&);
-    
+
     /**
      * @description: 调动epoll_ctrl进行具体的操作
      * @param {type} 
