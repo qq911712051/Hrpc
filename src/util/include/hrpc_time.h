@@ -9,7 +9,7 @@
 #define HRPC_TIME_H_
 #include <sys/time.h>
 #include <unistd.h>
-
+#include <string>
 
 namespace Hrpc
 {
@@ -29,6 +29,24 @@ public:
      * @return: 
      */
     static size_t getNowTime();
+
+    /**
+     * @description: 获取当前时间的时间戳
+     * @param {type} 
+     * @return: 
+     */
+    static std::string getTimeStamp();
+
+    /**
+     * @description: 将时间转化为 字符串时间戳
+     * @param: seconds 秒数 
+     * @return: 返回字符串时间戳
+     */
+    static std::string tm2str(size_t seconds);
+
+private:
+    
+
 };
 }
 #endif

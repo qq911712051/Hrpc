@@ -282,6 +282,9 @@ void Hrpc_Socket::connect(const std::string& addr, short port)
                     int tmpRes = -1;
                     char dummy[1];
 
+                    /**
+                     *   这里使用如果poll进行轮训更加的灵活和方便
+                     */
                     // 直到链接建立 10ms等待
                     size_t t1 = Hrpc_Time::getNowTimeMs();
                     while ((tmpRes = ::read(_fd, dummy, 0))!= 0)
