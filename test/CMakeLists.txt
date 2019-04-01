@@ -11,3 +11,4 @@ link_libraries("pthread")
 
 add_subdirectory(test_epoll)        # 对Hrpc_Epoller以及Hrpc_Socket以及Hrpc_Exception类进行测试
 add_subdirectory(test_thread_lock)  # 对于Hrpc_Thread以及相关锁， 原子变量等进行测试
+add_subdirectory(test_util)         # 对于util进行测试

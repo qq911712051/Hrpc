@@ -6,7 +6,8 @@ namespace Hrpc
 
 void Hrpc_Thread::start()
 {
-    
+    if (_running)
+        return;
     Hrpc_LockGuard<Hrpc_ThreadLock> sync(_lock);
     int res = pthread_create(&_tid, 0, enterFunc, this);
     if (res != 0)
@@ -69,7 +70,7 @@ void* Hrpc_Thread::enterFunc(void* ptr)
 
     // 线程已经停止运行
     self->_running = false;
-
+    return 0;
 }
 
 }
