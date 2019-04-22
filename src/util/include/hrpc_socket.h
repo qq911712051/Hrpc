@@ -49,6 +49,33 @@ public:
     Hrpc_Socket(int fd, bool owner = false, int domain = AF_INET) : _fd(fd), _bOwner(owner), _domain(domain) {}
 
     /**
+     * @description: 拷贝构造, 默认新构造的Socket没有所有权
+     * @param {type} 
+     * @return: 
+     */
+    Hrpc_Socket(const Hrpc_Socket& rl)
+    {
+        _fd = rl._fd;
+        _bOwner = false;
+        _domain = rl._domain;
+    }
+
+    Hrpc_Socket& operator=(const Hrpc_Socket&) = delete;
+    /**
+     * @description: socket的移动构造函数, 转移对象的所有权
+     * @param {type} 
+     * @return: 
+     */
+    Hrpc_Socket(Hrpc_Socket&& rl)
+    {
+        _fd = rl._fd;
+        _bOwner = rl._bOwner;
+        _domain = rl._domain;
+
+        rl._bOwner = false;
+    }
+
+    /**
      * @description: 初始化socket
      * @param 
      * @return: 
@@ -231,8 +258,7 @@ public:
 
     
 private:
-    Hrpc_Socket(const Hrpc_Socket&);
-    Hrpc_Socket& operator=(const Hrpc_Socket&);
+
 
     /**
      * @description: 将字符串转化为地址

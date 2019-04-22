@@ -4,7 +4,7 @@ project(Hrpc_test)
 
 
 # 设置-g编译
-set(CMAKE_CXX_FLAGS " -g  ${CMAKE_CXX_FLAGS}")
+set(CMAKE_CXX_FLAGS " -g  -std=c++11 ${CMAKE_CXX_FLAGS}")
 
 link_libraries("pthread")
 ## 所有需要测试的目录都在这里添加

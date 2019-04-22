@@ -17,6 +17,7 @@
 #include <hrpc_ptr.h>
 #include <hrpc_timer.h>
 #include <hrpc_queue.h>
+#include <hrpc_uid.h>
 
 #include <TcpConnection.h>
 #include <BindAdapter.h>
@@ -43,51 +44,6 @@ public:
  */
 class NetThread : Hrpc_Thread
 {
-    /**
-     * 一个uid生成器， 用来表示不同的链接
-     */
-    class UidGenarator
-    {
-    public:
-        /**
-         * @description: 
-         * @param: 
-         * @return: 
-         */
-        UidGenarator() {}
-
-        /**
-         * @description: 初始化uid序列 
-         * @param: maxConn 最大链接数 
-         * @return: 
-         */
-        void init(int maxConn = 1024);
-
-        /**
-         * @description: 释放相关资源
-         * @return: 
-         */
-        ~UidGenarator() {}
-
-        /**
-         * @description: 获取一个uid 
-         * @param {type} 
-         * @return: 
-         */
-        int popUid();
-
-        /**
-         * @description: 返还取出的uid 
-         * @param {type} 
-         * @return: 
-         */
-        void pushUid(int uid);
-        
-    private:
-        std::list<int>  _list;
-        Hrpc_ThreadLock _lock;
-    };
-
     enum
     {
         EPOLL_ET_LISTEN = 1,   // 监听fd上面有事件
@@ -111,7 +67,7 @@ public:
      * @param {type} 
      * @return: 
      */
-    virtual void run();
+    void run() override;
 
     /**
      * @description: 初始化整个网络线程 
@@ -133,21 +89,35 @@ public:
      * @param {type} 
      * @return: 
      */
-    void insertResponseQueue(const ResponsePtr& ptr);
+    void insertResponseQueue(ResponsePtr&& ptr);
+
+
+
+    /**
+     * @description: 将新的connection加入到connection的map中
+     *            
+     * @param {type} 
+     * @return: 
+     */
+    void addConnection(const TcpConnectionPtr& ptr);
+
+    /**
+     * @description: 将网络线程从epoll_wait中唤醒 
+     * @param {type} 
+     * @return: 
+     */
+    void notify();
 
     /**
      * @description: 停止网络线程的运行
      * @param {type} 
      * @return: 
      */
-    void terminate() {_terminate = true;}
+    void terminate();
+
+
 private:
-    /**
-     * @description: 将新的connection加入到connection的map中
-     * @param {type} 
-     * @return: 
-     */
-    void addConnection(const TcpConnectionPtr& ptr);
+    
 
     /**
      * @description: 处理监听端口事件 
@@ -199,6 +169,6 @@ private:
     bool                            _terminate;     // 网络线程是否停止
 };
 
-typedef Hrpc_SharedPtr<NetThread> NetThreadPtr;
+using NetThreadPtr = std::unique_ptr<NetThread>;
 }
 #endif

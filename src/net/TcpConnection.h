@@ -4,11 +4,15 @@
 
 #include <queue>
 #include <string>
+#include <memory>
+#include <mutex>
 
 #include <hrpc_socket.h>
 #include <hrpc_lock.h>
 #include <hrpc_ptr.h>
 #include <hrpc_buffer.h>
+
+#include <common.h>
 namespace Hrpc
 {
 
@@ -21,12 +25,6 @@ class BindAdapter;
 struct RequestMessage
 {
 public:
-    enum
-    {
-        HRPC_CLIENT_REQUEST = 1,            // 正常的客户端请求
-        HRPC_HEART_REQUEST                  // 网络线程检测到需要进行心跳检测的链接， 消息发往业务线程处理， 同时可以判断业务线程的存活
-    };
-public:
     TcpConnectionPtr        _connection;    // 标识消息对一个的链接
     Hrpc_Buffer             _buffer;        // 请求包的内容
     size_t                  _stamp;         // 接收请求的时间戳  
@@ -35,18 +33,14 @@ public:
 
 struct ResponseMessage
 {
-    enum
-    {
-        HRPC_SERVER_RESPONSE = 1,
-        HRPC_CLOSE_CONNECTION
-    };
 public:
     Hrpc_Buffer             _buffer;        // 响应包内容
     int                     _type;          // 响应类型
 };
 
-typedef Hrpc_SharedPtr<RequestMessage> RequestPtr;
-typedef Hrpc_SharedPtr<ResponseMessage> ResponsePtr;
+using RequestPtr = std::unique_ptr<RequestMessage>;
+
+using ResponsePtr = std::unique_ptr<ResponseMessage>;
 
 
 class TcpConnection
@@ -104,6 +98,15 @@ public:
     void getSocket(Hrpc_Socket& sock);
 private:
 
+    /**
+     * @description: 禁止拷贝以及赋值
+     * @param {type} 
+     * @return: 
+     */
+    TcpConnection(const TcpConnection&) = delete;
+    TcpConnection& operator=(const TcpConnection&) = delete;
+
+
 private:
     NetThread*          _netthread;        // 当前connection所属于的网络线程
     BindAdapter*        _bindAdapter;   // 当前connecton所属于的端口对象      
@@ -118,11 +121,10 @@ private:
 
     size_t              _lastActivity;  // 当前链接的最后一次活动时间
 
-    Hrpc_ThreadLock     _lock;          
+    std::mutex          _lock;          // 保护发送缓冲区
  
 };
-
-typedef Hrpc_SharedPtr<TcpConnection>   TcpConnectionPtr;
-
+using TcpConnectionPtr = std::shared_ptr<TcpConnection>;
+using TcpConnectionWeakPtr = std::weak_ptr<TcpConnection>;
 }
 #endif

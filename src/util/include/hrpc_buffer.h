@@ -9,6 +9,7 @@
 
 #include <string>
 #include <vector>
+#include <memory>
 
 #include <hrpc_ptr.h>
 #include <hrpc_exception.h>
@@ -126,7 +127,7 @@ private:
     size_t                  _cap;           // buffer容量
     size_t                  _before;        // buffer前端预留空间，便于直接在buffer前段插入数据
 };
-typedef Hrpc_SharedPtr<Hrpc_Buffer>  Hrpc_BufferPtr;
+typedef std::shared_ptr<Hrpc_Buffer>  Hrpc_BufferPtr;
 
 }
 #endif

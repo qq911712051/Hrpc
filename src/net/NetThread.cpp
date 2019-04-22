@@ -5,34 +5,7 @@
 #include <NetThread.h>
 namespace Hrpc
 {
-void NetThread::UidGenarator::init(int maxConn)
-{
-    Hrpc_LockGuard<Hrpc_ThreadLock> sync(_lock);
-    for (size_t index = 1; index <= maxConn; index++)
-    {
-        _list.push_back(index);
-    }
-}
-int NetThread::UidGenarator::popUid()
-{
-    Hrpc_LockGuard<Hrpc_ThreadLock> sync(_lock);
-    if (!_list.empty())
-    {
-        int tmp = _list.front();
-        _list.pop_front();
-        return tmp;
-    }
-    else
-    {
-        return -1;
-    }
-    
-}
-void NetThread::UidGenarator::pushUid(int uid)
-{
-    Hrpc_LockGuard<Hrpc_ThreadLock> sync(_lock);
-    _list.push_back(uid);
-}
+
 NetThread::NetThread(NetThreadGroup* ptr, int maxConn, int wait) : _threadGroup(ptr), _terminate(false), _Max_connections(maxConn), _waitTime(wait)
 {
     _uidGen.init(maxConn);
@@ -142,13 +115,56 @@ void NetThread::run()
         // 处理response队列
         processResponse();
 
-        // do other thing
-        // 定时器等操作
+        // 处理定时任务 以及 一些 网路线程任务
         _timer.process();
         
     }
-    std::cout << "a NetThread end" << std::endl;
+    std::cout << "[NetThread::run]: netthread is end" << std::endl;
 }
 
+void NetThread::insertResponseQueue(ResponsePtr&& resp)
+{
+    // 插入到待处理队列
+    _response_queue.push(std::move(resp));
+}
 
+void NetThread::notify()
+{
+    // 修改notify事件
+    _ep.mod(_notify.getFd(), 0, EPOLLOUT);
+}
+
+void NetThread::terminate()
+{
+    _terminate = true;
+
+    // 唤醒网络线程
+    notify();
+}
+
+void NetThread::addConnection(const TcpConnectionPtr& ptr)
+{
+    int uid = _uidGen.popUid();
+    if (uid < 0)
+    {
+        throw Hrpc_NetThreadException("[NetThread::addConnection]: get uid < 0");
+    }
+    
+    if (_connections.find(uid) != _connections.end())
+    {
+        _connections[uid] = ptr;
+    }
+    else
+    {
+        throw Hrpc_NetThreadException("[NetThread::addConnection]: connection-uid has exist");
+    }
+    
+}
+
+void NetThread::acceptConnection(int uid)
+{
+    auto bind = _listeners[uid];
+
+    
+}
 }

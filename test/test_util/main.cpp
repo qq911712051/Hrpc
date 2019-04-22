@@ -1,28 +1,137 @@
 #include <iostream>
+#include <thread>
+#include <cassert>
+#include <memory>
+#include <chrono>
+#include <atomic>
+
 #include <hrpc_ptr.h>
+#include <hrpc_timer.h>
+#include <hrpc_time.h>
+#include <hrpc_queue.h>
 using namespace Hrpc;
 
-class A
+using namespace std::chrono;
+
+
+void test_timer()
 {
-public:
-    ~A()
+    Hrpc_Timer timer;
+
+    auto f1 = [](){
+        std::cout << "hehee now time is " << Hrpc_Time::getNowTimeMs() << std::endl;
+    };
+    auto f2 = []() {
+        std::cout << "this is call once in " << Hrpc_Time::getNowTimeMs() << std::endl;
+    };
+    auto f3 = [](){
+        std::cout << "f3 now time is " << Hrpc_Time::getNowTimeMs() << std::endl;
+    };
+    auto id = timer.addTaskRepeat(0, 1000, f1);
+    auto id2 = timer.addTaskOnce(2000, f2);
+    auto id3 = timer.addTaskRepeat(3000, 2000, f3);
+    auto start = Hrpc_Time::getNowTime();
+    while (true)
     {
-        std::cout << "A deconstruct" << std::endl;
+        timer.process();   
+
+        
+
+        if (Hrpc_Time::getNowTime() - start > 10)
+        {
+            bool res = timer.stopTask(id);
+            if (res)
+            {
+                std::cout << "stop f1 succ" << std::endl;
+            }
+            else
+            {
+                std::cout << "stop f1 error" << std::endl;
+            }
+            break;
+        }
     }
-    int operator* () { return 11;}
-};
-
-void func(Hrpc_SharedPtr<A> ptr)
-{
-
-    std::cout << "addr = " << ptr.get() << std::endl;
-    std::cout << "count = " << ptr.count() << std::endl;
+    timer.process();
+    std::cout << "will stop same task again" << std::endl;
+    std::cout << timer.stopTask(id) << std::endl;
 }
 
-int main()
+
+void test_queue()
 {
-    Hrpc_SharedPtr<A> ptr = new A();
-    func(ptr);
-    std::cout << "count = " << ptr.count() << std::endl;
+    std::mutex ioLock;
+    bool bStop = false;
+    Hrpc_Queue<std::unique_ptr<int>> queue;
+    std::atomic<int> count;
+    auto producer = [&queue, &count, &bStop](){
+        while (!bStop)
+        {
+            int now = count.fetch_add(1);
+            queue.push(std::unique_ptr<int>(new int(now)));
+            std::this_thread::sleep_for(milliseconds(100));
+        }
+    };
+
+    auto consumer = [&queue, &bStop, &ioLock](){
+        while (!bStop)
+        {
+            // int data = queue.pop();
+            auto ptr = queue.pop(100);
+            if (ptr)
+            {
+                std::lock_guard<std::mutex> sync(ioLock);
+                std::cout << "get data is " << *ptr << std::endl;
+            }
+        }
+    };
+
+    std::thread pp[5];
+    for (auto& t : pp)
+    {
+        t = std::thread(producer);
+    }
+
+
+    std::thread cc[3];
+    for (auto& t : cc)
+    {
+        t = std::thread(consumer);
+    }
+
+    auto start = Hrpc_Time::getNowTime();
+    while (Hrpc_Time::getNowTime() - start < 5)
+    {
+        std::this_thread::sleep_for(seconds(1));
+    }
+    bStop = true;
+    std::cout << "wait other thread end" << std::endl;
+    for (auto& t : pp)
+    {
+        t.join();
+    }
+    for (auto& t : cc)
+    {
+        t.join();
+    }
+
+}
+int main(int argc, char* argv[])
+{
+    if (argc != 2)
+    {
+        assert(false);
+    }
+    std::string test = argv[1];
+
+    if (test == "Hrpc_Timer")
+    {
+        // 定时器测试
+        test_timer();
+    }
+    else if (test == "Hrpc_Queue")
+    {
+        // 并发队列测试
+        test_queue();
+    }
     return 0;    
 }

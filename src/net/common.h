@@ -8,6 +8,20 @@
 #ifndef HRPC_COMMON_H_
 #define HRPC_COMMON_H_
 
+namespace Hrpc
+{
 
+/**
+ *  请求包的类型 
+ */
+enum 
+{
+    HRPC_REQUEST_HEART = 1,     // 心跳协议
+    HRPC_REQUEST_FUNC           // 普通函数请求
+};
+
+
+
+}
 
 #endif

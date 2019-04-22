@@ -64,7 +64,10 @@ bool BindAdapter::accept(TcpConnectionPtr& ptr)
         
         // 设置TcpConnection的所属的网络线程
         NetThread* dest = _threadGroup->getNetThreadByRound();
+
         ptr->setNetThread(dest);
+        // 添加此connection到对应的网络线程
+        
 
     }
     catch (Hrpc_Exception& e)
