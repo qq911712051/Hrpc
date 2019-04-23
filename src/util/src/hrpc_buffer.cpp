@@ -157,4 +157,32 @@ void Hrpc_Buffer::clear()
     _cur = _before;
     _end = _before;
 }
+
+Hrpc_Buffer::Hrpc_Buffer(Hrpc_Buffer&& buffer)
+{
+    _buffer = buffer._buffer;
+    _cur = buffer._cur;
+    _end = buffer._end;
+    _cap = buffer._cap;
+    _before = buffer._before;
+    
+    buffer._buffer = nullptr;
+}
+
+Hrpc_Buffer& Hrpc_Buffer::operator=(Hrpc_Buffer&& buffer)
+{
+    // 释放自己的空间
+    if (_buffer)
+        delete [] _buffer;
+
+        
+    _buffer = buffer._buffer;
+    _cur = buffer._cur;
+    _end = buffer._end;
+    _cap = buffer._cap;
+    _before = buffer._before;
+    
+    buffer._buffer = nullptr;
+    
+}
 }

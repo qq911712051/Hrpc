@@ -4,6 +4,7 @@
 
 #include <queue>
 #include <string>
+#include <vector>
 #include <memory>
 #include <mutex>
 
@@ -19,28 +20,6 @@ namespace Hrpc
 class NetThread;
 class BindAdapter;
 
-/**
- * 业务线程处理的请求包结构体
- */
-struct RequestMessage
-{
-public:
-    TcpConnectionPtr        _connection;    // 标识消息对一个的链接
-    Hrpc_Buffer             _buffer;        // 请求包的内容
-    size_t                  _stamp;         // 接收请求的时间戳  
-    int                     _type;          // 类别。正常的客户端请求， 网络线程发送的心跳包等等
-};
-
-struct ResponseMessage
-{
-public:
-    Hrpc_Buffer             _buffer;        // 响应包内容
-    int                     _type;          // 响应类型
-};
-
-using RequestPtr = std::unique_ptr<RequestMessage>;
-
-using ResponsePtr = std::unique_ptr<ResponseMessage>;
 
 
 class TcpConnection
@@ -70,7 +49,35 @@ public:
     void setNetThread(NetThread* net) {_netthread = net;}
 
     /**
-     * @description: 发送消息往网络线程
+     * @description: 设置当前链接最后的活动时间
+     * @param {type} 
+     * @return: 
+     */
+    void setLastActivityTime(size_t time) {_lastActivity = time;}
+
+    /**
+     * @description: 获取当前链接最后的活动时间
+     * @param {type} 
+     * @return: 
+     */
+    size_t getLastActivityTime() const {return _lastActivity;}
+
+    /**
+     * @description: 设置当前connection的uid
+     * @param {type} 
+     * @return: 
+     */
+    void setUid(int uid) {_uid = uid;}
+
+    /**
+     * @description: 获取当前connection的uid
+     * @param {type} 
+     * @return: 
+     */
+    int getUid() const {return _uid;}
+
+    /**
+     * @description: 发送响应包回网络线程
      * @param {type} 
      * @return: 
      */
@@ -91,11 +98,70 @@ public:
     void recvData();
 
     /**
+     * @description: 将待发送缓冲区的所有数据发往 此链接对应的socket 
+     * @param {type} 
+     * @return: 如果数据全部发送完成则返回true，否则返回false
+     */
+    bool sendData();
+
+    /**
+     * @description: 将未发送完的数据压入 待发送缓冲区
+     * @param: data 待发送的数据， 此变量为右值
+     * @return: 
+     */
+    void pushDataInSendBuffer(Hrpc_Buffer&& data);
+
+    /**
+     * @description: 上一次发送数据时 是否全部发送成功 
+     * @param
+     * @return: 
+     */
+    bool isLastSendComplete() const {return _send_buffer.size() == 0;}
+
+    /**
+     * @description: 是否正在等待心跳响应包 返回
+     * @param {type} 
+     * @return: 
+     */
+    bool isHeartChecking() const {return _heartChecking;}
+
+    /**
+     * @description: 心跳检测结束
+     * @param {type} 
+     * @return: 
+     */
+    void setHeartCheckComplete() {_heartChecking = false;}
+
+    /**
+     * @description: 对当前链接进行心跳检测
+     * @param {type} 
+     * @return: 
+     */
+    void startHeartChecking() {_heartChecking = true;}
+
+    /**
      * @description: 获取当前链接的socket
      * @param: sock 获取的socket
      * @return: 
      */
     void getSocket(Hrpc_Socket& sock);
+
+    /**
+     * @description: 获取当前链接的fd
+     * @param {type} 
+     * @return: 
+     */
+    int getFd() const 
+    {
+        return _sock.getFd();
+    }
+
+    /**
+     * @description: 关闭当前的链接
+     * @param {type} 
+     * @return: 
+     */
+    void closeConnection();
 private:
 
     /**
@@ -104,24 +170,28 @@ private:
      * @return: 
      */
     TcpConnection(const TcpConnection&) = delete;
+    TcpConnection(TcpConnection&&) = delete;
     TcpConnection& operator=(const TcpConnection&) = delete;
-
-
+    TcpConnection& operator=(TcpConnection&&) = delete;
 private:
-    NetThread*          _netthread;        // 当前connection所属于的网络线程
-    BindAdapter*        _bindAdapter;   // 当前connecton所属于的端口对象      
+    NetThread*          _netthread = {nullptr};        // 当前connection所属于的网络线程
+    BindAdapter*        _bindAdapter = {nullptr};   // 当前connecton所属于的端口对象      
 
     Hrpc_Buffer         _recv_buffer;   // 接受缓冲区, 只存在一个网络线程访问，线程安全
 
-    Hrpc_Buffer         _send_buffer;   // 发送缓冲区， 非线程安全， 需要加锁保护
+    Hrpc_Buffer         _send_buffer;   // 保存未发送完成的数据, 只能存在网络线程访问， 因此线程安全
 
     Hrpc_Socket         _sock;          // 表示当前链接
     
-    bool                _close;         // 当前链接是否已经失效
+    bool                _close = {false};         // 当前链接是否已经失效
 
-    size_t              _lastActivity;  // 当前链接的最后一次活动时间
+    int                 _uid = {-1};           // 标识此链接在某个网络线程中的uid
 
-    std::mutex          _lock;          // 保护发送缓冲区
+    size_t              _lastActivity = {0};  // 当前链接的最后一次活动时间
+    
+    bool                _heartChecking = {false}; // 当前链接是否已经发送心跳检测包
+
+    std::mutex          _lock;         
  
 };
 using TcpConnectionPtr = std::shared_ptr<TcpConnection>;

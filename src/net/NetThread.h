@@ -21,6 +21,7 @@
 
 #include <TcpConnection.h>
 #include <BindAdapter.h>
+#include <common.h>
 
 namespace Hrpc
 {
@@ -92,14 +93,21 @@ public:
     void insertResponseQueue(ResponsePtr&& ptr);
 
 
-
     /**
-     * @description: 将新的connection加入到connection的map中
-     *            
-     * @param {type} 
+     * @description: 将新的TcpConnection加入到当前网络线程
+     *          添加操作将会由此网络线程执行， 避免加锁
+     * @param: ptr 一条网络链接
      * @return: 
      */
     void addConnection(const TcpConnectionPtr& ptr);
+
+    /**
+     * @description: 在此线程中异步运行一个任务
+     * @param {type} 
+     * @return: 
+     */
+    template <typename Func, typename... Args>
+    Hrpc_Timer::TimerId runTaskBySelf(Func&& f, Args&&... args);
 
     /**
      * @description: 将网络线程从epoll_wait中唤醒 
@@ -118,20 +126,35 @@ public:
 
 private:
     
+    /**
+     * @description: 心跳检测， 作为一个定时任务执行
+     * @param 
+     * @return: 
+     */
+    void HeartCheckTask();
+
+
+    /**
+     * @description: 链接被动关闭， 触发原因可能是
+     *             对端关闭链接， 或者是 对端对于心跳没有反应
+     * @param
+     * @return: 
+     */
+    void closeConnection(int uid);
 
     /**
      * @description: 处理监听端口事件 
-     * @param: uid BindAdapter对应的uid号
+     * @param: ev 接受到的事件
      * @return: 
      */
-    void acceptConnection(int uid);
+    void acceptConnection(epoll_event ev);
 
     /**
      * @description: 处理来自客户端链接的事件
-     * @param: uid  connection对应的uid号
+     * @param: ev  接受到的事件
      * @return: 
      */
-    void processConnection(int uid);
+    void processConnection(epoll_event ev);
 
     /**
      * @description: 触发shutdown事件
@@ -150,7 +173,8 @@ private:
     NetThreadGroup*                 _threadGroup;   // 管理当前网络线程的线程组
             
     Hrpc_Epoller                    _ep;            // 管理当前网络线程的fd
-    int                             _waitTime;      // epoll_wait时等待的时间
+    int                             _waitTime = {10};      // epoll_wait时等待的时间
+    int                             _heartTime = {2000};     // 心跳检测时间， 一个connection的不活动时间超过_heartTime, 就会对其发送心跳检测
 
     response_queue_type             _response_queue;    // 网络线程待处理队列
 
@@ -163,12 +187,31 @@ private:
     std::map<int, TcpConnectionPtr> _connections;   // uid对应的TcpConnection
     std::map<int, BindAdapter*>   _listeners;     // uid对应的BindAdapter
 
-    UidGenarator                    _uidGen;        // uid生成器
-    Hrpc_ThreadLock                 _lock;
+    UidGenarator                    _uidGen;        // uid生成器  
+
     const size_t                    _Max_connections;   // 最大连接数
     bool                            _terminate;     // 网络线程是否停止
 };
 
 using NetThreadPtr = std::unique_ptr<NetThread>;
+
+
+template <typename Func, typename... Args>
+Hrpc_Timer::TimerId NetThread::runTaskBySelf(Func&& f, Args&&... args)
+{
+    // 将传入参数封装为函数对象
+    auto task = std::bind(std::forward<Func>(f), std::forward<Args>(args)...);
+    
+    // 新建一个response对象
+    auto resp = ResponsePtr(new ResponseMessage);
+    resp->_type = ResponseMessage::HRPC_RESPONSE_TASK;
+    
+    resp->_task = std::unique_ptr<ResponseMessage::Task>(new Task(std::move(task)));
+
+    _response_queue.push(resp);
+
+    // 将网络线程从epoll_wait中唤醒
+    notify();
+}
 }
 #endif

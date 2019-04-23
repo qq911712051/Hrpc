@@ -78,9 +78,9 @@ public:
     /**
      * @description: 快速交换
      * @param {type} 
-     * @return: 返回是否交换成功， 要同时锁住2个锁， 如果发生死锁，则返回false
+     * @return: 
      */
-    bool swap(const Hrpc_Queue& q);
+    void swap(const Hrpc_Queue& q);
 
     /**
      * @description: 获取队列中元素的个数
@@ -181,19 +181,15 @@ bool Hrpc_Queue<ObjectType, BaseContainer>::empty()
 }
     
 template <typename ObjectType, template <class,class> class BaseContainer>
-bool Hrpc_Queue<ObjectType, BaseContainer>::swap(const Hrpc_Queue& q)
+void Hrpc_Queue<ObjectType, BaseContainer>::swap(const Hrpc_Queue& q)
 {
-    // 防止死锁
-    Hrpc_LockGuard<Hrpc_ThreadLock> sync(_lock);
-    bool res = q._lock.tryLock();
-    if (!res)
-        return false;
+    std::lock<Hrpc_ThreadLock, Hrpc_ThreadLock>(_lock, q._lock);
+    
+    std::lock_guard<Hrpc_ThreadLock> lock_1(_lock, std::adopt_lock);
+    std::lock_guard<Hrpc_ThreadLock> lock_2(q._lock, std::adopt_lock);
 
     _queue.swap(q._queue);
 
-    // 这里进行解锁
-    q._lock.unlock();
-    return true;
 }
 
 template <typename ObjectType, template <class,class> class BaseContainer>

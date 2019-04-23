@@ -44,8 +44,9 @@ void BindAdapter::initialize()
 }
 
 
-bool BindAdapter::accept(TcpConnectionPtr& ptr)
+bool BindAdapter::accept()
 {
+    TcpConnectionPtr ptr;
     try
     {
         Hrpc_Socket sock;
@@ -67,8 +68,7 @@ bool BindAdapter::accept(TcpConnectionPtr& ptr)
 
         ptr->setNetThread(dest);
         // 添加此connection到对应的网络线程
-        
-
+        dest->addConnection(ptr);
     }
     catch (Hrpc_Exception& e)
     {

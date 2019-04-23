@@ -11,13 +11,18 @@ TcpConnection::TcpConnection(int fd, BindAdapter* bind)
     : _netthread(0), _bindAdapter(bind), _close(false)
 {
     // 初始化其余变量
-    _lastActivity = Hrpc_Time::getNowTime();
+    _lastActivity = Hrpc_Time::getNowTimeMs();
 
     // 初始化socket
     _sock.init(fd, true, AF_INET);
     _sock.setNonBlock();
     _sock.setNonDelay();
 
+}
+
+void TcpConnection::pushDataInSendBuffer(Hrpc_Buffer&& data)
+{
+    _send_buffer.pushData(std::move(data));
 }
 
 /**

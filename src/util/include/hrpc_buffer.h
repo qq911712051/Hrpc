@@ -46,6 +46,20 @@ public:
     Hrpc_Buffer(size_t size = 1024, size_t before = 16);
 
     /**
+     * @description: 移动构造函数
+     * @param {type} 
+     * @return: 
+     */
+    Hrpc_Buffer(Hrpc_Buffer&& buffer);
+
+    /**
+     * @description: 移动赋值 函数
+     * @param {type} 
+     * @return: 
+     */
+    Hrpc_Buffer& operator=(Hrpc_Buffer&&);
+
+    /**
      * @description: 释放资源 
      * @param {type} 
      * @return: 
@@ -53,6 +67,16 @@ public:
     ~Hrpc_Buffer();
 
 
+    
+    /**
+     * @description: 禁止拷贝以及赋值
+     * @param {type} 
+     * @return: 
+     */
+    Hrpc_Buffer(const Hrpc_Buffer&) = delete;
+    Hrpc_Buffer& operator=(const Hrpc_Buffer&) = delete;
+    
+    
     /**
      * @description: 清空缓冲区所有内容
      * @param {type} 
@@ -69,6 +93,13 @@ public:
     bool write(const std::string& data);
     
     bool write(const char* data, int len = -1);
+
+    /**
+     * @description: 压入数据到当前缓冲区
+     * @param {type} 
+     * @return: 
+     */
+    void pushData(Hrpc_Buffer&& buf);
 
     /**
      * @description: 跳过n字节数据, 将位置游标后移

@@ -43,10 +43,9 @@ public:
 
     /**
      * @description: 接受新连接
-     * @param: ptr 新连接智能指针
      * @return: 如果接受成功，返回true， 如果失败，返回false
      */
-    bool accept(TcpConnectionPtr& ptr);
+    bool accept();
 
     /**
      * @description: 插入请求到队列
