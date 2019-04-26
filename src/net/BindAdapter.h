@@ -13,8 +13,11 @@
 #include <hrpc_queue.h>
 #include <hrpc_ptr.h>
 #include <hrpc_socket.h>
+#include <hrpc_baseProtocol.h>
+#include <hrpc_config.h>
 
 #include <TcpConnection.h>
+#include <HandleThread.h>
 
 namespace Hrpc
 {
@@ -24,15 +27,31 @@ class NetThreadGroup;
 
 class BindAdapter
 {
+    using Handle = std::unique_ptr<HandleThread>;
 public:
 
     /**
      * @description: 构造监听socket
      * @param: host 本机地址  
      * @param: port 本机端口 
+     * @param: num  端口对应的业务线程数量 
      * @return: 
      */
-    BindAdapter(NetThreadGroup* group, const std::string& host, short port);
+    BindAdapter(NetThreadGroup* group, const std::string& host, short port, int num, const std::string& objectName);
+
+
+    /**
+     * @description: 释放资源 
+     * @param {type} 
+     * @return: 
+     */
+    ~BindAdapter();
+    /**
+     * @description: 启动所有的业务线程 
+     * @param {type} 
+     * @return: 
+     */
+    void start();
 
     /**
      * @description: 初始化链接
@@ -52,14 +71,14 @@ public:
      * @param {type} 
      * @return: 
      */
-    void addRequest(RequestPtr req);
+    void addRequest(RequestPtr&& req);
 
     /**
-     * @description: 阻塞获取新请求
-     * @param: req 新请求   timeout  超时时间
-     * @return: 是否超时
+     * @description: 获取所有的请求
+     * @param: timeout  过期时间
+     * @return: 
      */
-    bool getRequest(RequestPtr& req, int timeout);
+    std::queue<RequestPtr> getAllRequest(int timeout = -1);
 
 
     /**
@@ -82,6 +101,29 @@ public:
      * @return: 
      */
     int getBindFd() const {return _listen.getFd();}
+
+    /**
+     * @description: 获取端口对应的 对象的名称
+     * @param {type} 
+     * @return: 
+     */
+    std::string getObjectName() {return _objectName;}
+
+    /**
+     * @description: 往当前端口对应的业务线程中 添加可供解析的 业务协议
+     * @param {type} 
+     * @return: 
+     */
+    template<typename Protocol>
+    void addProtocol();
+
+    /**
+     * @description: 设置心跳协议 
+     * @param {type} 
+     * @return: 
+     */
+    template<typename Protocol>
+    void setHeartProtocol();
     
 private:
 
@@ -93,8 +135,30 @@ private:
     short                           _port;              // 绑定的本机端口
     Hrpc_Socket                     _listen;            // 端口对应的socket
     
+    std::string                     _objectName = {"#"};        // 当前端口虚拟的对象名称
+    
+    std::vector<Handle>             _handles;           // 业务线程处理组
+    int                             _threadNum;         // 业务线程数量
 
 };
-typedef Hrpc_SharedPtr<BindAdapter> BindAdapterPtr;
+
+template<typename Protocol>
+void BindAdapter::addProtocol()
+{
+    for (auto& handle : _handles)
+    {
+        handle->addHandleProtocol(HandleThread::Protocol(new Protocol), Protocol::getName());
+    }
+}
+
+template<typename Protocol>
+void BindAdapter::setHeartProtocol()
+{
+    for (auto& handle : _handles)
+    {
+        handle->setHeartProtocol(HandleThread::Protocol(new Protocol));
+    }
+}
+
 }
 #endif

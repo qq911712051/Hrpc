@@ -14,4 +14,19 @@ NetThread* NetThreadGroup::getNetThreadByRound()
     size_t threadIndex = hash % _thread_num;
     return _threads[threadIndex].get();
 }
+
+void NetThreadGroup::terminate()
+{
+    for (auto& t : _threads)
+        t->terminate();
+}
+
+NetThreadGroup::~NetThreadGroup()
+{
+    terminate();
+    
+    for (auto& t : _threads)
+        t->join();
+    
+}
 }

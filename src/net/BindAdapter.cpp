@@ -8,7 +8,8 @@
 namespace Hrpc
 {
 
-BindAdapter::BindAdapter(NetThreadGroup* group, const std::string& host, short port) : _threadGroup(group), _host(host), _port(port)
+BindAdapter::BindAdapter(NetThreadGroup* group, const std::string& host, short port, int num, const std::string& name) 
+    : _threadGroup(group), _host(host), _port(port), _threadNum(num), _objectName(name)
 {
 
 }
@@ -24,6 +25,14 @@ void BindAdapter::initialize()
         _listen.setNonDelay();      // 关闭Nagle算法
         _listen.bind(_host, _port);
         _listen.listen(1024);
+
+        // 新建业务数组
+        for (int i = 0; i < _threadNum; i++)
+        {
+            _handles.push_back(Handle(new HandleThread(this)));
+            // 初始化
+            _handles[0]->intialize();
+        }
     }
     catch (Hrpc_Exception& e)
     {
@@ -88,32 +97,35 @@ bool BindAdapter::accept()
     return true;
 }
 
-/**
- * @description: 插入请求到队列
- * @param {type} 
- * @return: 
- */
-void addRequest(RequestPtr req);
+void BindAdapter::addRequest(RequestPtr&& req)
+{
+    _request_queue.push(std::move(req));
+}
 
-/**
- * @description: 阻塞获取新请求
- * @param: req 新请求   timeout  超时时间
- * @return: 是否超时
- */
-bool getRequest(RequestPtr& req, int timeout);
+std::queue<RequestPtr> BindAdapter::getAllRequest(int timeout = -1)
+{
+    std::queue<RequestPtr> queue;
+    
+    // 交换
+    _request_queue.swap(queue, timeout);
+    return queue;
+}
 
-/**
- * @description: 将需要进行心跳检测的链接插入到心跳检测队列队列 
- * @param: ptr  需要进行心跳检测的链接
- * @return: 
- */
-void insertHeartConnection(TcpConnectionPtr ptr);
+void BindAdapter::start()
+{
+    for (auto& t : _handles)
+    {
+        t->start(); // 业务线程启动
+    }
+}
 
-/**
- * @description: 获取所有的需要进行心跳检测的链接
- * @param: queue  心跳检测队列
- * @return: 
- */
-void getAllHeartConnection(Hrpc_Queue<TcpConnectionPtr>& queue);
+BindAdapter::~BindAdapter()
+{
+    for (auto& t : _handles)
+        t->terminate();
+    
+    for (auto& t : _handles)
+        t->join();
+}
 
 }

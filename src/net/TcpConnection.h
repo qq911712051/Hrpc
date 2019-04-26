@@ -22,7 +22,14 @@ class BindAdapter;
 
 
 
-class TcpConnection
+/**
+ * 这个类 表示一条链接, 用来在网络线程和 业务线程中间  进行一些数据的传递
+ * 
+ * TcpConnection进行收发数据包时， 遵循的格式为
+ *      |-----4bytes----|------data------------|---4bytes---|
+ *   数据包大小（不包括头部长度） + 原始的数据   + 4字节的验错码
+ */
+class TcpConnection : public std::enable_shared_from_this<TcpConnection>
 {
 public:
     typedef std::queue<std::string> queue_type;
@@ -32,7 +39,7 @@ public:
      * @param {type} 
      * @return: 
      */
-    TcpConnection(int fd, BindAdapter* bind);
+    TcpConnection(int fd, BindAdapter* bind, int bufferlen = 1024);
 
     /**
      * @description: 释放相关资源
@@ -78,17 +85,20 @@ public:
 
     /**
      * @description: 发送响应包回网络线程
-     * @param {type} 
+     *         在这里完成数据包的最外层封装操作
+     * @param: msg 需要发送的数据
      * @return: 
      */
-    void sendResponse(const std::string& msg);
+    void sendResponse(Hrpc_Buffer&& msg);
 
     /**
-     * @description: 对于当前链接，进行心跳检测
+     * @description: 对于当前链接，进行心跳检测, 发送往业务线程
      * @param {type} 
      * @return: 
      */
     void sendHeartCheck();
+
+    
 
     /**
      * @description: 从此链接接受数据,若接收到完整数据包， 即发送给业务线程
@@ -100,9 +110,13 @@ public:
     /**
      * @description: 将待发送缓冲区的所有数据发往 此链接对应的socket 
      * @param {type} 
-     * @return: 如果数据全部发送完成则返回true，否则返回false
+     * @return: 返回当前数据发送的状态
+     *         若为0， 表示缓冲区全部发送完成
+     *         若为-1， 表示对端关闭链接
+     *         若为-2， 表示当前socket的发送缓冲区已满, 部分数据还未发送完成
+     *         若为-3. 异常情况，并且关闭链接
      */
-    bool sendData();
+    int sendData();
 
     /**
      * @description: 将未发送完的数据压入 待发送缓冲区
@@ -140,13 +154,6 @@ public:
     void startHeartChecking() {_heartChecking = true;}
 
     /**
-     * @description: 获取当前链接的socket
-     * @param: sock 获取的socket
-     * @return: 
-     */
-    void getSocket(Hrpc_Socket& sock);
-
-    /**
      * @description: 获取当前链接的fd
      * @param {type} 
      * @return: 
@@ -157,11 +164,33 @@ public:
     }
 
     /**
-     * @description: 关闭当前的链接
+     * @description: 关闭当前的链接, 给业务线程调用
      * @param {type} 
      * @return: 
      */
     void closeConnection();
+private:
+
+    /**
+     * @description: 将请求数据发往 业务线程处理
+     * @param: buf 请求包原始数据
+     * @return: 
+     */
+    void sendRequest(Hrpc_Buffer&& buf);
+    /**
+     * @description: 检测当前是否收到完整的数据包
+     *      如果有完整数据包， 则将其发送到业务线程的处理队列 
+     * @param {type} 
+     * @return: 是否检测一个完整数据包
+     */    
+    bool check();
+
+    /**
+     * @description: 对于数据包处理时发生的错误 进行处理
+     * @param: type 错误的类型 
+     * @return: 
+     */
+    void processError(int type = 0);
 private:
 
     /**
@@ -192,9 +221,18 @@ private:
     bool                _heartChecking = {false}; // 当前链接是否已经发送心跳检测包
 
     std::mutex          _lock;         
- 
+
+    char*               _tmpBuffer = {nullptr}; // 作为临时缓冲区使用， 避免频繁的内存分配
+    int                 _bufferLen = {1024}; // 临时缓冲区的长度
+    
+    static std::string  _validateCode;          // 数据包结尾的验错码
+    static size_t       _maxPackageLength;      // 数据包的最大长度
 };
-using TcpConnectionPtr = std::shared_ptr<TcpConnection>;
+// 设置最基本的验错码
+std::string TcpConnection::_validateCode = "####";              // 数据包验证码
+size_t TcpConnection::_maxPackageLength = 1024 * 1024 * 10;     // 数据包的最大长度为10M
+
 using TcpConnectionWeakPtr = std::weak_ptr<TcpConnection>;
+using TcpConnectionPtr = std::shared_ptr<TcpConnection>;
 }
 #endif

@@ -5,8 +5,8 @@
  * @Date: 2019-03-30 17:09:37
  */
 
-#ifndef HRPC_COMMON_H_
-#define HRPC_COMMON_H_
+#ifndef COMMON_H_
+#define COMMON_H_
 
 #include <memory>
 #include <functional>
@@ -25,8 +25,8 @@ struct RequestMessage
      */
     enum 
     {
-        HRPC_REQUEST_HEART = 1,     // 心跳协议
-        HRPC_REQUEST_FUNC           // 普通函数请求
+        HRPC_REQUEST_HEART = 1,     // 由自身网络线程发送的心跳请求
+        HRPC_REQUEST_FUNC           // 由对端 发送的请求
     };
 public:
     std::weak_ptr<TcpConnection>    _connection;    // 标识链接

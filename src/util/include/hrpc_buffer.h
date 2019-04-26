@@ -67,14 +67,32 @@ public:
     ~Hrpc_Buffer();
 
 
-    
     /**
-     * @description: 禁止拷贝以及赋值
+     * @description: 以网络字节序 压入一个int值
      * @param {type} 
      * @return: 
      */
-    Hrpc_Buffer(const Hrpc_Buffer&) = delete;
-    Hrpc_Buffer& operator=(const Hrpc_Buffer&) = delete;
+    bool appendFrontInt32(int data);
+    bool appendInt32(int data);
+
+
+    bool appendFrontInt8(std::int8_t data);
+    bool appendInt8(std::int8_t data);
+
+    bool appendFrontInt16(std::int16_t data);
+    bool appendInt16(std::int16_t data);
+
+    
+
+    /**
+     * @description: 查看数据前面4个字节的内容， 并将其从网络序转换为int32 
+     * @param {type} 
+     * @return: 
+     */
+    std::int32_t peekFrontInt32();
+    std::int16_t peekFrontInt16();
+    std::int8_t peekFrontInt8();
+    
     
     
     /**
@@ -84,7 +102,42 @@ public:
      */
     void clear();
 
+    /**
+     * @description: 将buffer中数据转化为字节码输出
+     * @param {type} 
+     * @return: 
+     */
+    std::string toByteString();
+
+    /**
+     * @description: 在当前buffer中寻找字符串data 
+     * @param: data  目标字符串
+     * @return: 如果找到， 返回其位置，否则返回-1
+     */
+    const char* find(const std::string& data) const;
     
+    /**
+     * @description: 获取指定地点的数据
+     * @param: pos  数据位置
+     * @param: len  数据长度
+     * @return: 返回包含数据的字符串
+     */
+    std::string get(size_t pos, size_t len);
+
+    /**
+     * @description: 获取指定地点的数据
+     * @param: pos  数据位置
+     * @param: len  数据长度
+     * @return: 返回一个包含数据的buffer 
+     */
+    Hrpc_Buffer getToBuffer(size_t pos, size_t len);
+
+    /**
+     * @description: 将当前位置游标移动到目标位置
+     * @param: pos 目标位置
+     * @return: 是否成功
+     */
+    bool skipTo(const char* pos);
     /**
      * @description: 写入数据
      * @param {type} 
@@ -138,6 +191,15 @@ public:
      */
     const char* end() const {return _buffer + _end;}
 private:
+    /**
+     * @description: 禁止拷贝以及赋值
+     * @param {type} 
+     * @return: 
+     */
+    Hrpc_Buffer(const Hrpc_Buffer&) = delete;
+    Hrpc_Buffer& operator=(const Hrpc_Buffer&) = delete;
+
+
     /**
      * @description: 扩容buffer
      * @param: len 扩容后的buffer大小

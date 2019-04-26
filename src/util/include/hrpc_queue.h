@@ -60,6 +60,8 @@ public:
      * @return: 
      */
     ObjectType pop(int timeout= -1);
+
+    
     
     /**
      * @description: 清空队列
@@ -81,6 +83,13 @@ public:
      * @return: 
      */
     void swap(const Hrpc_Queue& q);
+
+    /**
+     * @description: 将当前队列中所有内容 快速交换 到tmp中
+     * @param:  timeout 阻塞时间
+     * @return: 
+     */
+    void swap(std::queue<ObjectType>& tmp, int timeout = -1);
 
     /**
      * @description: 获取队列中元素的个数
@@ -190,6 +199,26 @@ void Hrpc_Queue<ObjectType, BaseContainer>::swap(const Hrpc_Queue& q)
 
     _queue.swap(q._queue);
 
+}
+
+template <typename ObjectType, template <class,class> class BaseContainer>
+void Hrpc_Queue<ObjectType, BaseContainer>::swap(std::queue<ObjectType>& q, int timeout)
+{
+    Hrpc_LockGuard<Hrpc_ThreadLock> sync(_lock);
+    while (_queue.empty())
+    {
+        if (timeout < 0)
+            _lock.wait();
+        else
+        {
+            bool res = _lock.timeWait(timeout);
+            if (!res)
+            {
+                return;
+            }
+        }   
+    }
+    _queue.swap(q);
 }
 
 template <typename ObjectType, template <class,class> class BaseContainer>

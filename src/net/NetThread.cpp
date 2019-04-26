@@ -7,7 +7,7 @@
 namespace Hrpc
 {
 
-NetThread::NetThread(NetThreadGroup* ptr, int maxConn, int wait) : _threadGroup(ptr), _terminate(false), _Max_connections(maxConn), _waitTime(wait)
+NetThread::NetThread(NetThreadGroup* ptr, int maxConn, int wait, int heartTime) : _threadGroup(ptr), _terminate(false), _Max_connections(maxConn), _waitTime(wait), _heartTime(heartTime)
 {
     _uidGen.init(maxConn);
 }
@@ -246,8 +246,8 @@ void NetThread::processConnection(epoll_event ev)
         if (ev.events & EPOLLOUT)
         {
             // 发送数据
-            bool res = conn->second->sendData();
-            if (res)
+            int res = conn->second->sendData();
+            if (res == 0)
             {
                 // 删除对于可写事件的监听
                 _ep.mod(conn->second->getFd(), (EPOLL_ET_NET << 32) | conn->second->getUid(), EPOLLIN);
@@ -265,13 +265,15 @@ void NetThread::processConnection(epoll_event ev)
 void NetThread::processResponse()
 {
     // 快速获取所有的待处理任务
-    response_queue_type taskQueue;
-    taskQueue.swap(_response_queue);
+    std::queue<ResponsePtr> taskQueue;
+    _response_queue.swap(taskQueue);
 
     // 处理任务
     while (!taskQueue.empty())
     {
-        auto task = taskQueue.pop();
+        // 取出元素
+        auto task = std::move(taskQueue.front());
+        taskQueue.pop();
         
         auto conn = task->_connection.lock();
         if (!conn)
@@ -300,8 +302,8 @@ void NetThread::processResponse()
                 {
                     // bool res =conn->sendData(std::move(*buf));
                     conn->pushDataInSendBuffer(std::move(*buf));
-                    bool res = conn->sendData();
-                    if (!res)
+                    int res = conn->sendData();
+                    if (res == -2) // 数据还未发送完成
                     {
                         // 监听链接是否可写
                         _ep.mod(conn->getFd(), (EPOLL_ET_NET << 32) | conn->getUid(), EPOLLIN | EPOLLOUT);    
@@ -348,6 +350,9 @@ void NetThread::closeConnection(int uid)
         _ep.del(conn->getFd());
         // 从connections链表中删除此链接
         _connections.erase(conn->getUid());
+
+        // 归还uid
+        _uidGen.pushUid(uid);
     }
     else
     {
@@ -362,9 +367,11 @@ void NetThread::HeartCheckTask()
     for (auto& x : _connections)
     {
         auto nowTime = Hrpc_Time::getNowTimeMs();
-        if (nowTime - x.second->getLastActivityTime() > _heartTime)
+        
+        auto diffTime = nowTime - x.second->getLastActivityTime();
+        if (diffTime > _heartTime)
         {
-            if (x.second->isHeartChecking())
+            if (diffTime > _heartTime * 3)
             {
                 std::cout << "[NetThread::closeConnection]: NetThread[" << std::this_thread::get_id()
                         << "], conneciton-id:" << x.second->getUid() << "  heartChecking timeout" << std::endl;
@@ -372,12 +379,15 @@ void NetThread::HeartCheckTask()
                 closeConnection(x.second->getUid());
                 continue;
             }
-            // 需要进行心跳检测
-            x.second->startHeartChecking();
 
+            // 进行心跳检测
             x.second->sendHeartCheck();
         }
     }
 }
 
+NetThread::~NetThread()
+{
+    terminate();
+}
 }

@@ -9,6 +9,7 @@
 #include <hrpc_timer.h>
 #include <hrpc_time.h>
 #include <hrpc_queue.h>
+#include <hrpc_config.h>
 using namespace Hrpc;
 
 using namespace std::chrono;
@@ -115,6 +116,26 @@ void test_queue()
     }
 
 }
+void test_config()
+{
+
+    Hrpc_Config config;
+    config.parse("/home/abel/study/coding/1.cfg");
+    config.print();
+    std::cout << "------------------------" << std::endl;
+    auto& node = config.getConfigNode("/hrpc/server/BindAdapter/");
+    
+    std::cout << "the size = " << node->_map.size() << std::endl;
+    for (auto& x : node->_map)
+    {
+        std::cout << "****************" << std::endl;
+        for (auto& s : x.second->_map)
+            std::cout << s.second->_option << ":" << s.second->_value << std::endl;
+        std::cout << "****************" << std::endl;
+    }
+
+}
+
 int main(int argc, char* argv[])
 {
     if (argc != 2)
@@ -133,5 +154,15 @@ int main(int argc, char* argv[])
         // 并发队列测试
         test_queue();
     }
+    else if (test == "Hrpc_Config")
+    {
+        // 测试config配置读取
+        test_config();
+    }
+    else
+    {
+        std::cerr << "unknown test project" << std::endl;
+    }
+    
     return 0;    
 }

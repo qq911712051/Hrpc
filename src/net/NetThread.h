@@ -61,7 +61,9 @@ public:
      * @param {type} 
      * @return: 
      */
-    NetThread(NetThreadGroup* ptr, int maxConn = 1024, int wait = 10);
+    NetThread(NetThreadGroup* ptr, int maxConn = 1024, int wait = 10, int heartTime = 2000);
+    
+    ~NetThread();
 
     /**
      * @description: 网络核心线程run函数， 一个主循环监听fd 
@@ -101,6 +103,7 @@ public:
      */
     void addConnection(const TcpConnectionPtr& ptr);
 
+
     /**
      * @description: 在此线程中异步运行一个任务
      * @param {type} 
@@ -109,12 +112,6 @@ public:
     template <typename Func, typename... Args>
     Hrpc_Timer::TimerId runTaskBySelf(Func&& f, Args&&... args);
 
-    /**
-     * @description: 将网络线程从epoll_wait中唤醒 
-     * @param {type} 
-     * @return: 
-     */
-    void notify();
 
     /**
      * @description: 停止网络线程的运行
@@ -123,8 +120,22 @@ public:
      */
     void terminate();
 
+    /**
+     * @description: 链接被动关闭， 触发原因可能是
+     *             对端关闭链接， 或者是 对端对于心跳没有反应
+     * @param
+     * @return: 
+     */
+    void closeConnection(int uid);
 
 private:
+
+    /**
+     * @description: 将网络线程从epoll_wait中唤醒 
+     * @param {type} 
+     * @return: 
+     */
+    void notify();
     
     /**
      * @description: 心跳检测， 作为一个定时任务执行
@@ -134,13 +145,6 @@ private:
     void HeartCheckTask();
 
 
-    /**
-     * @description: 链接被动关闭， 触发原因可能是
-     *             对端关闭链接， 或者是 对端对于心跳没有反应
-     * @param
-     * @return: 
-     */
-    void closeConnection(int uid);
 
     /**
      * @description: 处理监听端口事件 

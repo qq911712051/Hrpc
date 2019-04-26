@@ -16,13 +16,27 @@ namespace Hrpc
 class NetThreadGroup
 {
 public:
-    NetThreadGroup() {}
+    NetThreadGroup() = default;
+
+    /**
+     * @description: 析构函数, 释放资源 
+     * @param {type} 
+     * @return: 
+     */
+    ~NetThreadGroup();
 
     /**
      * @description: 初始化网络线程
      * @return: 
      */
     void initialize();
+
+    /**
+     * @description: 启动网络线程 
+     * @param {type} 
+     * @return: 
+     */
+    void start();
 
     /**
      * @description: 为线程组添加监听端口， 所有的监听端口都在1号网络线程处理
@@ -39,6 +53,12 @@ public:
      */
     NetThread* getNetThreadByRound();
 
+    /**
+     * @description: 终止网络线程执行 
+     * @param {type} 
+     * @return: 
+     */
+    void terminate();
     
 private:
 
