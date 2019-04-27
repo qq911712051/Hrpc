@@ -9,6 +9,7 @@
 #include <queue>
 #include <vector>
 #include <deque>
+#include <mutex>
 
 #include <hrpc_lock.h>
 namespace Hrpc

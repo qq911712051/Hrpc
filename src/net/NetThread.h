@@ -14,6 +14,7 @@
 #include <hrpc_socket.h>
 #include <hrpc_lock.h>
 #include <hrpc_epoller.h>
+#include <hrpc_config.h>
 #include <hrpc_ptr.h>
 #include <hrpc_timer.h>
 #include <hrpc_queue.h>
@@ -43,7 +44,7 @@ public:
  *  网络线程核心类， 主要进行收发包工作
  *     以及验证包的完整性
  */
-class NetThread : Hrpc_Thread
+class NetThread : public Hrpc_Thread
 {
     enum
     {
@@ -61,7 +62,7 @@ public:
      * @param {type} 
      * @return: 
      */
-    NetThread(NetThreadGroup* ptr, int maxConn = 1024, int wait = 10, int heartTime = 2000);
+    NetThread(NetThreadGroup* ptr, const Hrpc_Config& config);
     
     ~NetThread();
 
@@ -74,7 +75,7 @@ public:
 
     /**
      * @description: 初始化整个网络线程 
-     * @param {type} 
+     * @param: config 配置选项
      * @return: 
      */
     void initialize();
@@ -193,7 +194,7 @@ private:
 
     UidGenarator                    _uidGen;        // uid生成器  
 
-    const size_t                    _Max_connections;   // 最大连接数
+    size_t                          _Max_connections;   // 最大连接数
     bool                            _terminate;     // 网络线程是否停止
 };
 
@@ -210,9 +211,9 @@ Hrpc_Timer::TimerId NetThread::runTaskBySelf(Func&& f, Args&&... args)
     auto resp = ResponsePtr(new ResponseMessage);
     resp->_type = ResponseMessage::HRPC_RESPONSE_TASK;
     
-    resp->_task = std::unique_ptr<ResponseMessage::Task>(new Task(std::move(task)));
+    resp->_task = std::unique_ptr<ResponseMessage::Task>(new ResponseMessage::Task(std::move(task)));
 
-    _response_queue.push(resp);
+    _response_queue.push(std::move(resp));
 
     // 将网络线程从epoll_wait中唤醒
     notify();

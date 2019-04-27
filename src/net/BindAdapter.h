@@ -124,6 +124,13 @@ public:
      */
     template<typename Protocol>
     void setHeartProtocol();
+
+    /**
+     * @description: 判断业务线程是否正在运行 
+     * @param {type} 
+     * @return: 
+     */
+    bool isRunning();
     
 private:
 

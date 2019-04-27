@@ -102,6 +102,13 @@ private:
      * @return: 
      */
     void init();
+
+    /**
+     * @description: 检查系统的运行状态, 状态异常返回false
+     * @param {type} 
+     * @return: 
+     */
+    bool checkStatus();
 private:
     /**
      * @description: 禁止拷贝和赋值

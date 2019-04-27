@@ -112,7 +112,7 @@ public:
     /**
      * @description: 在当前buffer中寻找字符串data 
      * @param: data  目标字符串
-     * @return: 如果找到， 返回其位置，否则返回-1
+     * @return: 如果找到， 返回其位置，否则返回end()
      */
     const char* find(const std::string& data) const;
     
@@ -147,6 +147,8 @@ public:
     
     bool write(const char* data, int len = -1);
 
+    bool write(const char* begin, const char* end);
+
     /**
      * @description: 压入数据到当前缓冲区
      * @param {type} 
@@ -176,6 +178,13 @@ public:
      * @return: 
      */
     size_type  size() const {return _end - _cur;}
+
+    /**
+     * @description: 获取当前buffer的容量
+     * @param 
+     * @return: 
+     */
+    size_type caplicity() const {return _cap;}
 
     /**
      * @description: 缓冲区头部地址
@@ -213,6 +222,20 @@ private:
      * @return: 
      */
     size_t freeSize() const {return _cap - _end;}
+
+    /**
+     * @description: 将字节转化为 16进制显示的字符串
+     * @param {type} 
+     * @return: 
+     */
+    std::string toHexByteString(int byte);
+
+    /**
+     * @description: 优化当前buffer的空间使用 
+     * @param {type} 
+     * @return: 
+     */
+    void optimizeSpace();
 private:
     char*                   _buffer;        // 缓冲区
     size_type               _cur;           // 当前游标位置

@@ -10,6 +10,7 @@
 
 #include <queue>
 #include <functional>
+#include <iostream>
 #include <memory>
 #include <set>
 #include <map>

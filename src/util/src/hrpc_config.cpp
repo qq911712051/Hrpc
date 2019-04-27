@@ -255,7 +255,7 @@ bool Hrpc_Config::isValidCharacter(char ch)
     
 }
 
-std::string Hrpc_Config::getString(const std::string& path)
+std::string Hrpc_Config::getString(const std::string& path) const
 {
     if (!_config)
         throw Hrpc_ConfigException("[Hrpc_Config::print]: not initialize the Hrpc_Config");

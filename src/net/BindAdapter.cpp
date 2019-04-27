@@ -31,7 +31,7 @@ void BindAdapter::initialize()
         {
             _handles.push_back(Handle(new HandleThread(this)));
             // 初始化
-            _handles[0]->intialize();
+            _handles[i]->intialize();
         }
     }
     catch (Hrpc_Exception& e)
@@ -102,7 +102,7 @@ void BindAdapter::addRequest(RequestPtr&& req)
     _request_queue.push(std::move(req));
 }
 
-std::queue<RequestPtr> BindAdapter::getAllRequest(int timeout = -1)
+std::queue<RequestPtr> BindAdapter::getAllRequest(int timeout)
 {
     std::queue<RequestPtr> queue;
     
@@ -126,6 +126,16 @@ BindAdapter::~BindAdapter()
     
     for (auto& t : _handles)
         t->join();
+}
+
+bool BindAdapter::isRunning()
+{
+    for (auto& x : _handles)
+    {
+        if (!x->isRunning())
+            return false;
+    }
+    return true;
 }
 
 }

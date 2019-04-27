@@ -12,8 +12,6 @@
 #include <hrpc_lock.h>
 namespace Hrpc
 { 
-
-
 /**
  * @description: 线程异常类
  */
@@ -31,8 +29,8 @@ public:
  */
 class Hrpc_Thread
 {
-public:
 
+public:
     /**
      * @description: 构造线程类
      * @param {type} 
@@ -91,6 +89,7 @@ private:
      */
     static void* enterFunc(void*);
 private:
+
     bool _running; // 是否正在运行
     pthread_t _tid; // 线程id
     Hrpc_ThreadLock _lock;  // 保证start函数结束前， 新线程已经开始运行

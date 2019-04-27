@@ -77,7 +77,7 @@ public:
      * @param: option 配置项路径 
      * @return: 
      */
-    std::string getString(const std::string& path);
+    std::string getString(const std::string& path) const;
 
     /**
      * @description: 读取相关节点

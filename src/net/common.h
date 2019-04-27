@@ -14,6 +14,7 @@
 namespace Hrpc
 {
 
+class TcpConnection;
 
 /**
  * 业务线程处理的请求包结构体

@@ -16,6 +16,7 @@
 
 #include <HrpcProtocol.h>
 #include <HeartProtocol.h>
+#include <common.h>
 
 namespace Hrpc
 {

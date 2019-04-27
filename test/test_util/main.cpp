@@ -10,6 +10,7 @@
 #include <hrpc_time.h>
 #include <hrpc_queue.h>
 #include <hrpc_config.h>
+#include <hrpc_buffer.h>
 using namespace Hrpc;
 
 using namespace std::chrono;
@@ -136,6 +137,49 @@ void test_config()
 
 }
 
+void test_buffer()
+{
+    // 基本功能测试
+    Hrpc_Buffer buf(32, 8);
+    
+    buf.appendInt32(123);
+    buf.appendInt16(10);
+    buf.appendInt8(64);
+    
+    // 压到前面
+    buf.appendFrontInt8(111);
+
+    std::cout << "size = " << buf.size() << std::endl;
+    int res = 0;
+    res = buf.peekFrontInt8();
+    std::cout << "get 8bit = " << res << std::endl;
+    buf.skipBytes(1);
+
+    res = buf.peekFrontInt32();
+    std::cout << "get 32bit = " << res << std::endl;
+    buf.skipBytes(4);
+
+    res = buf.peekFrontInt16();
+    std::cout << "get 16bit = " << res << std::endl;
+    buf.skipBytes(2);
+
+    res = buf.peekFrontInt8();
+    std::cout << "get 8bit = " << res << std::endl;
+    buf.skipBytes(1);
+
+    buf.clear();
+    std::cout << "size = " << buf.size() << ", cap = " << buf.caplicity() << std::endl;
+
+    buf.write("12344329847dakhdjkabfka23243hellodsadsadsad");
+    auto pos = buf.find("hello");
+    std::cout << "pos = " << pos - buf.begin() << std::endl;
+
+    std::cout << "get string = " << buf.get(28, 5) << std::endl;
+    
+    auto s1 = buf.getToBuffer(28, 5);
+    std::cout << "s1 size = " << s1.size() << ", context = " << s1.toByteString() << std::endl;
+}
+
 int main(int argc, char* argv[])
 {
     if (argc != 2)
@@ -158,6 +202,11 @@ int main(int argc, char* argv[])
     {
         // 测试config配置读取
         test_config();
+    }
+    else if (test == "Hrpc_Buffer")
+    {
+        // 测试buffer
+        test_buffer();
     }
     else
     {

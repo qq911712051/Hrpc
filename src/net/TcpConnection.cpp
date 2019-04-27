@@ -166,7 +166,7 @@ bool TcpConnection::check()
 {
     if (_recv_buffer.size() > 4)
     {
-        auto size = _recv_buffer.peerFrontInt32();
+        auto size = _recv_buffer.peekFrontInt32();
         if (size > 0)
         {
             if (size > _maxPackageLength)

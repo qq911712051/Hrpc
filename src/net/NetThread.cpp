@@ -3,13 +3,44 @@
 
 #include <sys/epoll.h>
 
+#include <hrpc_common.h>
+
 #include <NetThread.h>
 namespace Hrpc
 {
 
-NetThread::NetThread(NetThreadGroup* ptr, int maxConn, int wait, int heartTime) : _threadGroup(ptr), _terminate(false), _Max_connections(maxConn), _waitTime(wait), _heartTime(heartTime)
+// NetThread::NetThread(NetThreadGroup* ptr, int maxConn, int wait, int heartTime) : _threadGroup(ptr), _terminate(false), _Max_connections(maxConn), _waitTime(wait), _heartTime(heartTime)
+NetThread::NetThread(NetThreadGroup* ptr, const Hrpc_Config& config) : _threadGroup(ptr), _terminate(false)
 {
-    _uidGen.init(maxConn);
+    std::string data = config.getString("/hrpc/server/NetThread/MaxConnection");
+    int res = Hrpc_Common::strto<int>(data);
+    if (res <= 0)
+    {
+        res = 1024;     // 若没有定义， 则默认1024
+    }
+    _Max_connections = 1024;
+    _uidGen.init(res);
+
+    // epoll时间
+    data = config.getString("/hrpc/server/NetThread/EpollWaitTime");
+
+    res = Hrpc_Common::strto<int>(data);
+    if (res <= 0)
+    {
+        res = 10;
+    }
+    _waitTime = res;
+
+    // 心跳协议时间
+    data = config.getString("/hrpc/server/NetThread/HeartTime");
+
+    res = Hrpc_Common::strto<int>(data);
+    if (res <= 0)
+    {
+        res = 2;
+    }
+    _heartTime = res;
+    
 }
 
 void NetThread::addBindAdapter(BindAdapter* bind)
@@ -21,9 +52,6 @@ void NetThread::addBindAdapter(BindAdapter* bind)
         throw Hrpc_NetThreadException("[NetThread::addBindAdapter]: uid is null, connection is too large");
     }
     _listeners[uid] = bind;
-
-    // 初始化bind端口, 开启监听
-    bind->initialize();
 
 }
 
@@ -38,8 +66,8 @@ void NetThread::initialize()
         _ep.createEpoll(_Max_connections);
 
         // 添加唤醒socket以及关闭socket
-        _ep.add(_notify.getFd(), EPOLL_ET_NOTIFY << 32, EPOLLIN);
-        _ep.add(_shutdown.getFd(), EPOLL_ET_CLOSE << 32, EPOLLIN);
+        _ep.add(_notify.getFd(), std::int64_t(EPOLL_ET_NOTIFY) << 32, EPOLLIN);
+        _ep.add(_shutdown.getFd(), std::int64_t(EPOLL_ET_CLOSE) << 32, EPOLLIN);
 
         // 添加监听端口
         typedef std::map<int, BindAdapter*>::iterator bind_iterator;
@@ -47,7 +75,7 @@ void NetThread::initialize()
         for (; it != _listeners.end(); it++)
         {
             int fd = it->second->getBindFd();
-            uint64_t data = EPOLL_ET_LISTEN << 32;
+            uint64_t data = std::int64_t(EPOLL_ET_LISTEN) << 32;
             data |= it->first;
             _ep.add(fd, data, EPOLLIN);
         }
@@ -81,7 +109,7 @@ void NetThread::run()
     try
     {
         //开启循环
-        while (!terminate)
+        while (!_terminate)
         {
             // epoll等待
             size_t nums = _ep.wait(_waitTime);
@@ -204,7 +232,7 @@ void NetThread::addConnection(const TcpConnectionPtr& ptr)
         this->_connections[id] = ptr;
 
         // 将当前链接添加到ep监听中
-        this->_ep.add(ptr->getFd(), (EPOLL_ET_NET<<32) | id, EPOLLIN);
+        this->_ep.add(ptr->getFd(), (std::int64_t(EPOLL_ET_NET)<<32) | id, EPOLLIN);
         
     };
     
@@ -250,7 +278,7 @@ void NetThread::processConnection(epoll_event ev)
             if (res == 0)
             {
                 // 删除对于可写事件的监听
-                _ep.mod(conn->second->getFd(), (EPOLL_ET_NET << 32) | conn->second->getUid(), EPOLLIN);
+                _ep.mod(conn->second->getFd(), (std::int64_t(EPOLL_ET_NET) << 32) | conn->second->getUid(), EPOLLIN);
             }
         }
     }
@@ -306,7 +334,7 @@ void NetThread::processResponse()
                     if (res == -2) // 数据还未发送完成
                     {
                         // 监听链接是否可写
-                        _ep.mod(conn->getFd(), (EPOLL_ET_NET << 32) | conn->getUid(), EPOLLIN | EPOLLOUT);    
+                        _ep.mod(conn->getFd(), (std::int64_t(EPOLL_ET_NET) << 32) | conn->getUid(), EPOLLIN | EPOLLOUT);    
                     }
                 }
                 else

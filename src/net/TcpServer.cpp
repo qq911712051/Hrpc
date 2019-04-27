@@ -1,8 +1,11 @@
+#include <thread>
 #include <iostream>
+#include <chrono>
 
 #include <hrpc_common.h>
 
 #include <TcpServer.h>
+using namespace std::chrono;
 
 namespace Hrpc
 {
@@ -13,18 +16,37 @@ void TcpServer::exec()
         throw Hrpc_TcpServerException("[TcpServer::exec]: not load config-file");
     }
     init();         // 初始化TcpServer
+    std::cout << "[TcpServer::exec]: intialize the TcpServer succ" << std::endl;
+
     intialize();    // 调用子类的初始化函数
-    
+    std::cout << "[TcpServer::exec]: call user-defined intializer succ" << std::endl;
     // 网络线程启动
     _net->start();
+    std::cout << "[TcpServer::exec]: NetThread start!" << std::endl;
+    // 业务线程启动
+    for (auto& x : _bindAdapterFactory)
+    {
+        x.second->start();
+    }
+    std::cout << "[TcpServer::exec]: handleThread start!" << std::endl;
     
-    
+    // 判断系统的运行状态
+    while (checkStatus())
+    {
+        
+        std::this_thread::sleep_for(seconds(1));
+    }
+
+
+    // 执行用户自定义的销毁程序
+    destroy();
 }
 
 void TcpServer::init()
 {
     // 首先初始化网络线程组
     _net = NetGroupPtr(new NetThreadGroup());   
+    _net->initialize(_config);
 
     // 初始化BindAdapter组
     std::cout << "search BindAdapter..." << std::endl;
@@ -79,8 +101,13 @@ void TcpServer::init()
         
         // 创建BindAdapter
         auto pBind = new BindAdapter(_net, host, sPort, num, bind.first);
+        // 初始化bindadapter
+        pBind->initialize();
+        
         _bindAdapterFactory[bind.first] = pBind;
 
+        // 添加bindapter到网络线程
+        _net->addBindAdapter(pBind);
     }
 }
 
@@ -130,6 +157,22 @@ TcpServer::~TcpServer()
     }
     // 释放网络线程组
     delete _net;
+}
+
+bool TcpServer::checkStatus()
+{
+    auto netR = _net->isRunning();
+    if (!netR)
+    {
+        return false;
+    }
+
+    for (auto& x : _bindAdapterFactory)
+    {
+        if (!x.second->isRunning())
+            return false;
+    }
+    return true;
 }
 
 }

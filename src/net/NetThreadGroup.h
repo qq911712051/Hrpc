@@ -9,6 +9,7 @@
 #include <vector>
 
 #include <hrpc_atomic.h>
+#include <hrpc_config.h>
 
 #include <NetThread.h>
 namespace Hrpc
@@ -26,25 +27,26 @@ public:
     ~NetThreadGroup();
 
     /**
-     * @description: 初始化网络线程
+     * @description: 初始化网络线程组
+     *       新建网络线程
      * @return: 
      */
-    void initialize();
+    void initialize(const Hrpc_Config& config);
 
     /**
      * @description: 启动网络线程 
+     *      初始化所有网络线程并启动
      * @param {type} 
      * @return: 
      */
     void start();
 
     /**
-     * @description: 为线程组添加监听端口， 所有的监听端口都在1号网络线程处理
-     * @param: host 监听的本机地址
-     * @param: port 监听的本机端口
+     * @description: 添加监听端口
+     * @param: bind 端口对象的指针
      * @return: 
      */
-    void addBindAdapter(const std::string& host, short port);
+    void addBindAdapter(BindAdapter* bind);
 
     /**
      * @description: 采用轮训策略，选出一个新的网络线程
@@ -59,6 +61,13 @@ public:
      * @return: 
      */
     void terminate();
+
+    /**
+     * @description: 网络线程组是否正在运行
+     * @param {type} 
+     * @return: 
+     */
+    bool isRunning();
     
 private:
 

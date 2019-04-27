@@ -1,3 +1,9 @@
+/*
+ * @author: blackstar0412
+ * @github: github.com/qq911712051
+ * @description: 这里是HRPC解析协议文件 
+ * @Date: 2019-04-27 16:36:11
+ */
 #ifndef HRPCPROTOCOL_H_
 #define HRPCPROTOCOL_H_
 
@@ -5,6 +11,9 @@
 namespace Hrpc
 {
 
+/**
+ * HRPC通信协议的具体实现， 数据的封装格式如下
+ */
 class HrpcProtocol : public Hrpc_BaseProtocol
 {
 public:
@@ -27,7 +36,7 @@ public:
      * @param {type} 
      * @return: 
      */
-    ~HrpcProtocol() override;
+    ~HrpcProtocol() override {}
 private:
     static std::string _name;
 };
