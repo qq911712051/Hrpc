@@ -7,6 +7,8 @@
 
 namespace Hrpc
 {
+std::string HeartProtocol::_name = "HEART"; // 定义心跳协议的名称
+
 Hrpc_Buffer HeartProtocol::parse(Hrpc_Buffer&& buf)
 {
     std::int8_t status;
@@ -16,10 +18,6 @@ Hrpc_Buffer HeartProtocol::parse(Hrpc_Buffer&& buf)
 
         switch (status)
         {
-            case HEART_REQUEST:
-            {
-                return doResponse();
-            }
             case HEART_RESPONSE:
             {
                 if (body.size() == 4)
@@ -78,20 +76,6 @@ bool HeartProtocol::extract(Hrpc_Buffer&& msg, std::int8_t& status, Hrpc_Buffer&
         return false;
     }
     return true;
-}
-
-Hrpc_Buffer HeartProtocol::doResponse()
-{
-    Hrpc_Buffer res;
-    std::uint8_t length = _name.size();
-    res.appendInt8(length);
-    res.write(_name);
-
-    res.appendInt8(HEART_RESPONSE);
-    // 协议主要内容为一个当前的时间
-    res.appendFrontInt32(Hrpc_Time::getNowTime());
-
-    return res;
 }
 
 }

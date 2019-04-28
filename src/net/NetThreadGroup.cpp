@@ -32,6 +32,8 @@ void NetThreadGroup::initialize(const Hrpc_Config& config)
         res = 3;     // 若没有定义 
     }
     _thread_num = res;
+
+    std::cout << "NetThreadGroup: threadNum = " << _thread_num << std::endl;
     // 新建网络线程
     for (int i = 0; i < _thread_num; i++)
     {

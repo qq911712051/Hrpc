@@ -31,9 +31,6 @@ void Hrpc_Config::parse(const std::string& file)
         data.append(buffer);
     }
     data.append(buffer);
-
-    std::cout << data << std::endl;
-    std::cout<< "------------------" << std::endl;
     // 解析
     _config = parseString(data);
 }

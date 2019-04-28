@@ -153,4 +153,23 @@ void HandleThread::addHandleProtocol(Protocol&& proto, const std::string protoNa
 
 }
 
+bool HandleThread::checkRequest(const Hrpc_Buffer& buf, std::string& protoName)
+{
+    if (buf.size() < 1)
+        return false;
+    
+    auto length = buf.peekFrontInt8();
+    if (length > 0)
+    {
+        protoName = buf.get(1, length);
+        if (protoName == "")
+            return false;
+    }
+    else
+    {
+        return false;
+    }
+    return true;
+}
+
 }

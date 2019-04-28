@@ -136,7 +136,7 @@ bool Hrpc_Buffer::skipBytes(size_t n)
 }
 
 
-size_t Hrpc_Buffer::read(char* buffer, size_t len)
+size_t Hrpc_Buffer::read(char* buffer, size_t len) const
 {
     if (!_buffer)
         throw Hrpc_BufferException("[Hrpc_Buffer::read]: _buffer is null");
@@ -152,7 +152,7 @@ size_t Hrpc_Buffer::read(char* buffer, size_t len)
     }
 }
 
-size_t Hrpc_Buffer::read(std::string& buffer)
+size_t Hrpc_Buffer::read(std::string& buffer) const
 {
     if (!_buffer)
         throw Hrpc_BufferException("[Hrpc_Buffer::read]: _buffer is null");
@@ -304,7 +304,7 @@ bool Hrpc_Buffer::appendInt8(std::int8_t data)
     return true;
 }
 
-std::int32_t Hrpc_Buffer::peekFrontInt32()
+std::int32_t Hrpc_Buffer::peekFrontInt32() const
 {
     if (!_buffer)
         throw Hrpc_BufferException("[Hrpc_Buffer::peekFrontInt32]: _buffer is null");
@@ -316,7 +316,7 @@ std::int32_t Hrpc_Buffer::peekFrontInt32()
     return Hrpc_Common::ntohInt32(origin);
 }
 
-std::int16_t Hrpc_Buffer::peekFrontInt16()
+std::int16_t Hrpc_Buffer::peekFrontInt16() const
 {
     if (!_buffer)
         throw Hrpc_BufferException("[Hrpc_Buffer::peekFrontInt16]: _buffer is null");
@@ -328,7 +328,7 @@ std::int16_t Hrpc_Buffer::peekFrontInt16()
     return Hrpc_Common::ntohInt16(origin);
 }
 
-std::int8_t Hrpc_Buffer::peekFrontInt8()
+std::int8_t Hrpc_Buffer::peekFrontInt8() const
 {
 
     if (!_buffer)
@@ -341,20 +341,20 @@ std::int8_t Hrpc_Buffer::peekFrontInt8()
     return origin;
 }
 
-std::string Hrpc_Buffer::toByteString()
+std::string Hrpc_Buffer::toByteString() const
 {
     if (!_buffer)
         throw Hrpc_BufferException("[Hrpc_Buffer::toByteString]: _buffer is null");
     std::string data;
     for (size_t i = _cur; i < _end - 1; i++)
     {
-        data += toHexByteString(int(_buffer[i])) + " ";
+        data += toHexByteString(int((unsigned char)_buffer[i])) + " ";
     }
     data += toHexByteString(_buffer[_end - 1]);
     return data;
 }
 
-std::string Hrpc_Buffer::toHexByteString(int byte)
+std::string Hrpc_Buffer::toHexByteString(int byte) const
 {
     std::stringstream ss;
     ss << std::hex << std::setw(2) << std::setfill('0') << byte;
@@ -381,7 +381,7 @@ const char* Hrpc_Buffer::find(const std::string& data) const
     return end();
 }
 
-std::string Hrpc_Buffer::get(size_t pos, size_t len)
+std::string Hrpc_Buffer::get(size_t pos, size_t len) const
 {
     if (!_buffer)
         throw Hrpc_BufferException("[Hrpc_Buffer::get]: _buffer is null");
@@ -393,7 +393,7 @@ std::string Hrpc_Buffer::get(size_t pos, size_t len)
 }
 
 
-Hrpc_Buffer Hrpc_Buffer::getToBuffer(size_t pos, size_t len)
+Hrpc_Buffer Hrpc_Buffer::getToBuffer(size_t pos, size_t len) const
 {
 
     if (!_buffer)
@@ -440,6 +440,22 @@ void Hrpc_Buffer::optimizeSpace()
         _cur = _before;
         _end = _cur + size;
     }
+}
+
+bool Hrpc_Buffer::appendFront(const std::string& data)
+{
+    auto length = data.size();
+    if (_cur >= length)
+    {
+        _cur -= length;
+        // 复制数据
+        ::memcpy(_buffer + _cur, data.data(), length);
+    }
+    else
+    {
+        return false;
+    }
+    return true;
 }
 
 

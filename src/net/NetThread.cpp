@@ -18,7 +18,9 @@ NetThread::NetThread(NetThreadGroup* ptr, const Hrpc_Config& config) : _threadGr
     {
         res = 1024;     // 若没有定义， 则默认1024
     }
-    _Max_connections = 1024;
+    _Max_connections = res;
+    std::cout << "NetThread [" << std::this_thread::get_id() << "] set MaxConnection param [" << res << "]" << std::endl;
+
     _uidGen.init(res);
 
     // epoll时间
@@ -31,16 +33,17 @@ NetThread::NetThread(NetThreadGroup* ptr, const Hrpc_Config& config) : _threadGr
     }
     _waitTime = res;
 
+    std::cout << "NetThread [" << std::this_thread::get_id() << "] set EpollWaitTime param [" << res << "]" << std::endl;
     // 心跳协议时间
     data = config.getString("/hrpc/server/NetThread/HeartTime");
 
     res = Hrpc_Common::strto<int>(data);
-    if (res <= 0)
+    if (res <= 1000)
     {
-        res = 2;
+        res = 1000;
     }
     _heartTime = res;
-    
+    std::cout << "NetThread [" << std::this_thread::get_id() << "] set HeartTime param [" << res << "]" << std::endl;
 }
 
 void NetThread::addBindAdapter(BindAdapter* bind)
@@ -141,8 +144,7 @@ void NetThread::run()
                         break;
                     }
                     default:
-                        std::cerr << "[NetThread::run]: switch type is unknown" << std::endl;
-                        assert(false);
+                        std::cerr << "[NetThread::run]: unknown MESSAGE-type [" << (ev.data.u64 >> 32) << "]" << std::endl;
                 };
             }        
 
@@ -177,7 +179,8 @@ void NetThread::insertResponseQueue(ResponsePtr&& resp)
 void NetThread::notify()
 {
     // 修改notify事件
-    _ep.mod(_notify.getFd(), 0, EPOLLOUT);
+    std::int64_t data = std::int64_t(EPOLL_ET_NOTIFY) << 32;
+    _ep.mod(_notify.getFd(), data, EPOLLOUT);
 }
 
 void NetThread::terminate()
@@ -294,7 +297,7 @@ void NetThread::processResponse()
 {
     // 快速获取所有的待处理任务
     std::queue<ResponsePtr> taskQueue;
-    _response_queue.swap(taskQueue);
+    _response_queue.swap(taskQueue, 0);
 
     // 处理任务
     while (!taskQueue.empty())
@@ -304,9 +307,9 @@ void NetThread::processResponse()
         taskQueue.pop();
         
         auto conn = task->_connection.lock();
-        if (!conn)
+        if (!conn && task->_type != ResponseMessage::HRPC_RESPONSE_TASK)
         {
-            std::cerr << "[NetThread::processResponse]: TcpConnection weak_p" << std::endl;
+            std::cerr << "[NetThread::processResponse]: TcpConnection weak_ptr is invalid" << std::endl;
             continue;
         }
 

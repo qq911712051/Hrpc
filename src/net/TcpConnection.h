@@ -228,9 +228,6 @@ private:
     static std::string  _validateCode;          // 数据包结尾的验错码
     static size_t       _maxPackageLength;      // 数据包的最大长度
 };
-// 设置最基本的验错码
-std::string TcpConnection::_validateCode = "####";              // 数据包验证码
-size_t TcpConnection::_maxPackageLength = 1024 * 1024 * 10;     // 数据包的最大长度为10M
 
 using TcpConnectionWeakPtr = std::weak_ptr<TcpConnection>;
 using TcpConnectionPtr = std::shared_ptr<TcpConnection>;

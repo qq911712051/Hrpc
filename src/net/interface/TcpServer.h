@@ -12,14 +12,14 @@
 #include <map>
 
 #include <hrpc_exception.h>
-
-#include <NetThreadGroup.h>
-#include <BindAdapter.h>
 #include <hrpc_config.h>
+
 
 namespace Hrpc
 {
 
+class BindAdapter;
+class NetThreadGroup;
 
 class Hrpc_TcpServerException : public Hrpc_Exception
 {

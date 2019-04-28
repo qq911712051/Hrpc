@@ -82,6 +82,7 @@ public:
     bool appendFrontInt16(std::int16_t data);
     bool appendInt16(std::int16_t data);
 
+    bool appendFront(const std::string& data);
     
 
     /**
@@ -89,9 +90,9 @@ public:
      * @param {type} 
      * @return: 
      */
-    std::int32_t peekFrontInt32();
-    std::int16_t peekFrontInt16();
-    std::int8_t peekFrontInt8();
+    std::int32_t peekFrontInt32() const;
+    std::int16_t peekFrontInt16() const;
+    std::int8_t peekFrontInt8() const;
     
     
     
@@ -107,7 +108,7 @@ public:
      * @param {type} 
      * @return: 
      */
-    std::string toByteString();
+    std::string toByteString() const;
 
     /**
      * @description: 在当前buffer中寻找字符串data 
@@ -122,7 +123,7 @@ public:
      * @param: len  数据长度
      * @return: 返回包含数据的字符串
      */
-    std::string get(size_t pos, size_t len);
+    std::string get(size_t pos, size_t len) const;
 
     /**
      * @description: 获取指定地点的数据
@@ -130,7 +131,7 @@ public:
      * @param: len  数据长度
      * @return: 返回一个包含数据的buffer 
      */
-    Hrpc_Buffer getToBuffer(size_t pos, size_t len);
+    Hrpc_Buffer getToBuffer(size_t pos, size_t len) const;
 
     /**
      * @description: 将当前位置游标移动到目标位置
@@ -168,9 +169,9 @@ public:
      * @param {type} 
      * @return: 
      */
-    size_type read(char* buffer, size_t len);
+    size_type read(char* buffer, size_t len) const;
 
-    size_type read(std::string& buffer);
+    size_type read(std::string& buffer) const;
 
     /**
      * @description: 获取缓冲区数据大小
@@ -185,6 +186,13 @@ public:
      * @return: 
      */
     size_type caplicity() const {return _cap;}
+
+    /**
+     * @description: 获取buffer的前端空间的大小
+     * @param {type} 
+     * @return: 
+     */
+    size_type beforeSize() const {return _cur;}
 
     /**
      * @description: 缓冲区头部地址
@@ -228,7 +236,7 @@ private:
      * @param {type} 
      * @return: 
      */
-    std::string toHexByteString(int byte);
+    std::string toHexByteString(int byte) const;
 
     /**
      * @description: 优化当前buffer的空间使用 

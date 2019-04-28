@@ -52,12 +52,6 @@ public:
      */
     static Hrpc_Buffer doRequest();
 private:
-    /**
-     * @description: 响应心跳协议
-     * @param {type} 
-     * @return: 
-     */
-    static Hrpc_Buffer doResponse();
 
     /**
      * @description: 提取msg消息包中一些信息
@@ -71,6 +65,6 @@ private:
 private:
     static std::string _name;
 };
-std::string HeartProtocol::_name = "HEART"; // 定义心跳协议的名称
+
 }
 #endif

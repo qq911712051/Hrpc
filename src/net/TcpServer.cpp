@@ -5,6 +5,9 @@
 #include <hrpc_common.h>
 
 #include <TcpServer.h>
+#include <NetThreadGroup.h>
+#include <BindAdapter.h>
+
 using namespace std::chrono;
 
 namespace Hrpc

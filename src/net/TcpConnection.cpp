@@ -12,6 +12,11 @@
 
 namespace Hrpc
 {
+
+// 设置最基本的验错码
+std::string TcpConnection::_validateCode = "####";              // 数据包验证码
+size_t TcpConnection::_maxPackageLength = 1024 * 1024 * 10;     // 数据包的最大长度为10M
+
 TcpConnection::TcpConnection(int fd, BindAdapter* bind, int bufferLen)
     : _netthread(0), _bindAdapter(bind), _close(false), _bufferLen(bufferLen)
 {
@@ -157,6 +162,9 @@ void TcpConnection::recvData()
         _recv_buffer.write(_tmpBuffer, cur);
         
     } while (!recvComplete);
+
+    // 更新最后的活动时间
+    setLastActivityTime(Hrpc_Time::getNowTimeMs());
 
     // 检测收到包的 完整性
     while (check());
