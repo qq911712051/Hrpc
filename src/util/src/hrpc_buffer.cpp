@@ -430,7 +430,7 @@ void Hrpc_Buffer::optimizeSpace()
     // 前端空闲空间超过70%， 则进行移动操作
     if ((double)_cur / _cap > 0.7)
     {
-        auto size = freeSize();
+        auto size = Hrpc_Buffer::size();
         for (size_t i = 0; i < size; i++)   
         {
             _buffer[_before + i] = _buffer[_cur + i];

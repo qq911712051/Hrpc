@@ -89,6 +89,13 @@ public:
 
     // 打印成文本
     void print();
+
+    /**
+     * @description: 当前配置文件是否已经成功解析
+     * @param {type} 
+     * @return: 
+     */
+    bool isValid() const {return _config != nullptr;}
 private:
     /**
      * @description: 打印当前节点的document树

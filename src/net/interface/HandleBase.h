@@ -26,7 +26,7 @@ public:
      * @param {type} 
      * @return: 
      */
-    virtual std::string getName() const = 0;
+    virtual std::string getObjectName() const = 0;
 };
 }
 #endif

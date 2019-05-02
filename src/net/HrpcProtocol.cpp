@@ -27,9 +27,9 @@ Hrpc_Buffer HrpcProtocol::parse(Hrpc_Buffer&& buf)
     if (extractFuncName(std::move(buf), objectName, funcName))
     {
         // 判断对象名称是否符合
-        if (objectName != _handle->getName())
+        if (objectName != _handle->getObjectName())
         {
-            std::cerr << "[HrpcProtocol::parse]: can't handle the Object [" << objectName << "], only deal with [" << _handle->getName() << "]" << std::endl;
+            std::cerr << "[HrpcProtocol::parse]: can't handle the Object [" << objectName << "], only deal with [" << _handle->getObjectName() << "]" << std::endl;
             return Hrpc_Buffer();
         }
 

@@ -17,6 +17,7 @@ namespace Hrpc
 class TcpConnection;
 
 /**
+ * 服务器端
  * 业务线程处理的请求包结构体
  */
 struct RequestMessage
@@ -37,22 +38,19 @@ public:
 };
 
 /**
- * @description: 网络线程需要处理的响应包  
+ *  网络线程待处理队列中处理的框架内部消息包
  */
 struct ResponseMessage
 {
-    /**
-     * @description: 响应包的类型
-     */
     enum 
     {
         HRPC_RESPONSE_NET = 1,  // 当前链接正常的回包
         HRPC_RESPONSE_CLOSE,    // 关闭当前链接
-        HRPC_RESPONSE_TASK,     // 在此网络线程异步完成完成某个任务
+        HRPC_RESPONSE_TASK,     // 异步完成完成某个任务
     };
     using Task = std::function<void()>;
 public:
-    std::weak_ptr<TcpConnection>    _connection;    // 标识链接
+    int                             _uid;           // 链接的uid
     int                             _type;          // 响应类型
     std::unique_ptr<Task>           _task;        // 具体的任务
     std::unique_ptr<Hrpc_Buffer>    _buffer;        // 响应包内容
@@ -61,7 +59,6 @@ public:
 using RequestPtr = std::unique_ptr<RequestMessage>;
 
 using ResponsePtr = std::unique_ptr<ResponseMessage>;
-
 
 }
 

@@ -3,6 +3,7 @@
 #include <cstring>
 
 #include <hrpc_config.h>
+#include <hrpc_common.h>
 
 namespace Hrpc
 {
@@ -17,6 +18,13 @@ void Hrpc_Config::parse(const std::string& file)
 
     // 开始解析文件
     std::fstream fin(file);
+
+
+    if (!fin.is_open())
+    {
+        throw Hrpc_Exception("[Hrpc_Config::parse]: file open error");
+    }
+
     // buffer
     char buffer[1024] = {0};
     std::string data;
@@ -28,9 +36,20 @@ void Hrpc_Config::parse(const std::string& file)
             // 出现错误
             throw Hrpc_ConfigException("[Hrpc_Config::parse]: the text line too large");
         }
+        // 是否有注释符号#
+        for (int i = 0; i < length; i++)
+        {
+            if (buffer[i] == '#')
+            {
+                buffer[i] = '\0';  // 忽略后面数据
+                break;
+            }
+        }
+        // 压入到有效数据中
         data.append(buffer);
     }
-    data.append(buffer);
+    std::cout << data << std::endl;
+    // data.append(buffer);
     // 解析
     _config = parseString(data);
 }
@@ -73,7 +92,7 @@ std::unique_ptr<Hrpc_Config::ConfigNode> Hrpc_Config::parseString(const std::str
             else
             {
                 std::string msg(data.begin(), data.begin() + cur);
-                throw Hrpc_ConfigException("[Hrpc_Config::parseString]: occur error = [" + msg + "]");
+                throw Hrpc_ConfigException("[Hrpc_Config::parseString]: occur error = [" + msg + "], alldata = [" + data + "], pos = " + Hrpc_Common::tostr(cur));
             }
         }
         else if (state == 1)
@@ -124,7 +143,7 @@ std::unique_ptr<Hrpc_Config::ConfigNode> Hrpc_Config::parseString(const std::str
                     else
                     {
                         std::string msg(data.begin(), data.begin() + cur);
-                        throw Hrpc_ConfigException("[Hrpc_Config::parseString]: occur error = [" + msg + "]");
+                        throw Hrpc_ConfigException("[Hrpc_Config::parseString]: occur error = [" + msg + "], alldata = [" + data + "], pos = " + Hrpc_Common::tostr(cur));
                     }
                 }
 
@@ -137,7 +156,7 @@ std::unique_ptr<Hrpc_Config::ConfigNode> Hrpc_Config::parseString(const std::str
             else
             {
                 std::string msg(data.begin(), data.begin() + cur);
-                throw Hrpc_ConfigException("[Hrpc_Config::parseString]: occur error = [" + msg + "]");
+                throw Hrpc_ConfigException("[Hrpc_Config::parseString]: occur error = [" + msg + "], alldata = [" + data + "], pos = " + Hrpc_Common::tostr(cur));
             }
         }
     }

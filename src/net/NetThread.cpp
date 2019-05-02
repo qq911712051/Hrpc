@@ -272,13 +272,52 @@ void NetThread::processConnection(epoll_event ev)
         if (ev.events & EPOLLIN)
         {
             // 有新数据到来
-            conn->second->recvData();
+            auto res = conn->second->recvData();
+            if (res == -1)
+            {
+                // 对端关闭
+                closeConnection(ConnectionBase::getUid());
+                std::cout << "[NetThread::processConnection]: NetThread[" << std::this_thread::get_id()
+                                    << "], conneciton-id:" << ConnectionBase::getUid() << " recv 0 bytes data, close connection" << std::endl;
+            }
+            else if (res == -2)
+            {
+                closeConnection(ConnectionBase::getUid());
+                std::cerr << "[NetThread::processConnection]: recv return -1 and errno = " << errno << std::endl;
+            }
+
+            // 检测收到包的 完整性
+            bool checkComplete = false;
+            do 
+            {
+                Hrpc_Buffer tmp;
+                checkComplete = conn->second->extractPackage(tmp);
+                if (tmp.size() != 0)
+                {
+                    // 有完整包，发往业务线程
+                    conn->second->sendRequest(std::move(tmp));
+                }
+
+            } while(checkComplete);
         }
         if (ev.events & EPOLLOUT)
         {
             // 发送数据
             int res = conn->second->sendData();
-            if (res == 0)
+            if (res == -1)
+            {
+                // 对端关闭链接
+                closeConnection(ConnectionBase::getUid());
+                std::cout << "[NetThread::processConnection]: NetThread[" << std::this_thread::get_id()
+                            << "], conneciton-id:" << ConnectionBase::getUid() << " send 0 bytes data, close connection" << std::endl;
+            }
+            else if (res == -3)
+            {
+                // 异常情况
+                std::cerr << "[NetThread::processConnection]: occur error, send return -1, and errno = " << errno << std::endl;
+                closeConnection(ConnectionBase::getUid());
+            }
+            else if (res == 0)
             {
                 // 删除对于可写事件的监听
                 _ep.mod(conn->second->getFd(), (std::int64_t(EPOLL_ET_NET) << 32) | conn->second->getUid(), EPOLLIN);
@@ -306,12 +345,18 @@ void NetThread::processResponse()
         auto task = std::move(taskQueue.front());
         taskQueue.pop();
         
-        auto conn = task->_connection.lock();
-        if (!conn && task->_type != ResponseMessage::HRPC_RESPONSE_TASK)
+        TcpConnectionPtr conn;
+        auto itr = _connections.find(task->_uid);
+        if (itr == _connections.end() && task->_type != ResponseMessage::HRPC_RESPONSE_TASK)
         {
             std::cerr << "[NetThread::processResponse]: TcpConnection weak_ptr is invalid" << std::endl;
             continue;
         }
+        else
+        {
+            conn = itr->second;
+        }
+        
 
         switch (task->_type)
         {
@@ -329,12 +374,25 @@ void NetThread::processResponse()
                 // 在这里发送数据
                 // 如果connection待发送缓冲区中还留存数据 则将 此数据压入connection的待发送缓冲区， 并监听对应socket的可写状态
                 // 如果connection待发送缓冲区中没有数据  则将此数据直接通过socket发送
-                if (conn->isLastSendComplete())
+                if (conn->sendBufferSize() == 0)
                 {
                     // bool res =conn->sendData(std::move(*buf));
-                    conn->pushDataInSendBuffer(std::move(*buf));
+                    conn->pushData(std::move(*buf));
                     int res = conn->sendData();
-                    if (res == -2) // 数据还未发送完成
+                    if (res == -1)
+                    {
+                        // 对端关闭链接
+                        closeConnection(ConnectionBase::getUid());
+                        std::cout << "[NetThread::processResponse]: NetThread[" << std::this_thread::get_id()
+                                    << "], conneciton-id:" << ConnectionBase::getUid() << " send 0 bytes data, close connection" << std::endl;
+                    }
+                    else if (res == -3)
+                    {
+                        // 异常情况
+                        std::cerr << "[NetThread::processResponse]: occur error, send return -1, and errno = " << errno << std::endl;
+                        closeConnection(ConnectionBase::getUid());
+                    }
+                    else if (res == -2) // 数据还未发送完成
                     {
                         // 监听链接是否可写
                         _ep.mod(conn->getFd(), (std::int64_t(EPOLL_ET_NET) << 32) | conn->getUid(), EPOLLIN | EPOLLOUT);    
@@ -343,7 +401,7 @@ void NetThread::processResponse()
                 else
                 {
                     // 新数据压到旧数据末尾
-                    conn->pushDataInSendBuffer(std::move(*buf));
+                    conn->pushData(std::move(*buf));
                 }
                 break;
             }

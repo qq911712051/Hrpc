@@ -121,7 +121,7 @@ void test_config()
 {
 
     Hrpc_Config config;
-    config.parse("/home/abel/study/coding/1.cfg");
+    config.parse("/home/abel/study/coding/2.cfg");
     config.print();
     std::cout << "------------------------" << std::endl;
     auto& node = config.getConfigNode("/hrpc/server/BindAdapter/");

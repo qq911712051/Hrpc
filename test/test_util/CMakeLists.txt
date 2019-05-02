@@ -1,11 +1,13 @@
 cmake_minimum_required(VERSION 2.8)
-project(test_thread_lock)
+project(test_util)
 
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin/test/test_util/")
 
-include_directories("/usr/local/hrpc/include/")
-link_directories("/usr/local/hrpc/libstatic")
-add_executable(test_util main.cpp)
+include_directories("../../src/util/include")
 
+aux_source_directory("../../src/util/src"  SrcList)
 
-target_link_libraries(test_util hrpc_util)
+list(APPEND SrcList main.cpp)
+
+add_executable(test_util ${SrcList})
+

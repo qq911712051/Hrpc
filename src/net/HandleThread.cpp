@@ -27,8 +27,8 @@ void HandleThread::run()
 
     while (!_terminate)
     {
-        // 获取请求, 阻塞等待
-        std::queue<RequestPtr> rq = _bindAdapter->getAllRequest();
+        // 获取请求, 阻塞100ms
+        std::queue<RequestPtr> rq = _bindAdapter->getAllRequest(100);
 
         while (!rq.empty())
         {
@@ -99,8 +99,11 @@ void HandleThread::processFunc(const RequestPtr& req)
             // 判断返回值是否为空
             if (response.size() != 0)
             {
-                // 需要进行回包
-                conn->sendResponse(std::move(response));
+                if (conn->isValid())
+                {
+                    // 需要进行回包
+                    conn->sendResponse(std::move(response));
+                }
             }
         }
         else
