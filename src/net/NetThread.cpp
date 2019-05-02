@@ -6,6 +6,7 @@
 #include <hrpc_common.h>
 
 #include <NetThread.h>
+using namespace std::placeholders;
 namespace Hrpc
 {
 
@@ -13,80 +14,75 @@ namespace Hrpc
 NetThread::NetThread(NetThreadGroup* ptr, const Hrpc_Config& config) : _threadGroup(ptr), _terminate(false)
 {
     std::string data = config.getString("/hrpc/server/NetThread/MaxConnection");
-    int res = Hrpc_Common::strto<int>(data);
-    if (res <= 0)
+    int maxConn = Hrpc_Common::strto<int>(data);
+    if (maxConn <= 0)
     {
-        res = 1024;     // 若没有定义， 则默认1024
+        maxConn = 1024;     // 若没有定义， 则默认1024
     }
-    _Max_connections = res;
-    std::cout << "NetThread [" << std::this_thread::get_id() << "] set MaxConnection param [" << res << "]" << std::endl;
+    
+    std::cout << "NetThread [" << std::this_thread::get_id() << "] set MaxConnection param [" << maxConn << "]" << std::endl;
 
-    _uidGen.init(res);
 
     // epoll时间
     data = config.getString("/hrpc/server/NetThread/EpollWaitTime");
 
-    res = Hrpc_Common::strto<int>(data);
-    if (res <= 0)
+    int epollTime = Hrpc_Common::strto<int>(data);
+    if (epollTime <= 0)
     {
-        res = 10;
+        epollTime = 10;
     }
-    _waitTime = res;
 
-    std::cout << "NetThread [" << std::this_thread::get_id() << "] set EpollWaitTime param [" << res << "]" << std::endl;
+    std::cout << "NetThread [" << std::this_thread::get_id() << "] set EpollWaitTime param [" << epollTime << "]" << std::endl;
     // 心跳协议时间
     data = config.getString("/hrpc/server/NetThread/HeartTime");
 
-    res = Hrpc_Common::strto<int>(data);
-    if (res <= 1000)
+    int heartTime = Hrpc_Common::strto<int>(data);
+    if (heartTime <= 1000)
     {
-        res = 1000;
+        heartTime = 1000;
     }
-    _heartTime = res;
-    std::cout << "NetThread [" << std::this_thread::get_id() << "] set HeartTime param [" << res << "]" << std::endl;
+    _heartTime = heartTime;
+    std::cout << "NetThread [" << std::this_thread::get_id() << "] set HeartTime param [" << heartTime << "]" << std::endl;
+
+    // 初始化EpollerServer
+    _server.init(maxConn, epollTime);
 }
 
 void NetThread::addBindAdapter(BindAdapter* bind)
 {  
-    // 获取uid
-    int uid = _uidGen.popUid();
-    if (uid < 0)
-    {
-        throw Hrpc_NetThreadException("[NetThread::addBindAdapter]: uid is null, connection is too large");
-    }
+    // 新建端口对象序号
+    int uid = _seq.add(1);
+
     _listeners[uid] = bind;
 
 }
 
 void NetThread::initialize()
 {
+    // 设置回调函数
+    _server.setCloseCallback(std::bind(&NetThread::closeEvent, this, _1));
+    _server.setListenCallback(std::bind(&NetThread::acceptEvent, this, _1, _2));
+    _server.setRecvCallback(std::bind(&NetThread::readEvent, this, _1, _2));
+    
     try
     {
-        _notify.CreateSocket(SOCK_STREAM, AF_INET);
-        _shutdown.CreateSocket(SOCK_STREAM, AF_INET);
-
-        // 初始化epoll
-        _ep.createEpoll(_Max_connections);
-
-        // 添加唤醒socket以及关闭socket
-        _ep.add(_notify.getFd(), std::int64_t(EPOLL_ET_NOTIFY) << 32, EPOLLIN);
-        _ep.add(_shutdown.getFd(), std::int64_t(EPOLL_ET_CLOSE) << 32, EPOLLIN);
-
         // 添加监听端口
-        typedef std::map<int, BindAdapter*>::iterator bind_iterator;
-        bind_iterator it = _listeners.begin();
+        auto it = _listeners.begin();
         for (; it != _listeners.end(); it++)
         {
             int fd = it->second->getBindFd();
-            uint64_t data = std::int64_t(EPOLL_ET_LISTEN) << 32;
+            uint64_t data = std::int64_t(EpollerServer::EPOLL_ET_LISTEN) << 32;
             data |= it->first;
-            _ep.add(fd, data, EPOLLIN);
+            // _ep.add(fd, data, EPOLLIN);
+            
+            _server.addListen(fd, data);
         }
         
         // 添加定时任务
         // 心跳检测
-        auto heartCheck = std::bind(&NetThread::HeartCheckTask, this);
-        _timer.addTaskRepeat(0, _heartTime, heartCheck);
+        _server.addTimerTaskRepeat(0, _heartTime, &NetThread::HeartCheckTask, this);
+
+
     }
     catch (const Hrpc_Exception& e)
     {
@@ -114,46 +110,9 @@ void NetThread::run()
         //开启循环
         while (!_terminate)
         {
-            // epoll等待
-            size_t nums = _ep.wait(_waitTime);
-            
-            for (size_t i = 0; i < nums; i++)
-            {
-                epoll_event ev = _ep.get(i);
-                // 根据事件类型分类处理
-                switch (ev.data.u64 >> 32)
-                {
-                    case EPOLL_ET_CLOSE:
-                    {
-                        closeEvent();
-                        break;
-                    }
-                    case EPOLL_ET_LISTEN:
-                    {
-                        acceptConnection(ev);
-                        break;
-                    }
-                    case EPOLL_ET_NET:
-                    {
-                        processConnection(ev);
-                        break;
-                    }
-                    case EPOLL_ET_NOTIFY:
-                    {
-                        // 什么也不做，仅仅将网络线程从阻塞状态中唤醒
-                        break;
-                    }
-                    default:
-                        std::cerr << "[NetThread::run]: unknown MESSAGE-type [" << (ev.data.u64 >> 32) << "]" << std::endl;
-                };
-            }        
-
-            // 处理response队列
-            processResponse();
-
-            // 处理定时任务 以及 一些 网路线程任务
-            _timer.process();
-            
+            // 运行epollSever核心循环
+            _server.run();
+    
         }
     }
     catch (const Hrpc_Exception& e)
@@ -169,18 +128,12 @@ void NetThread::run()
 
 void NetThread::insertResponseQueue(ResponsePtr&& resp)
 {
-    // 插入到待处理队列
-    _response_queue.push(std::move(resp));
-
-    // 唤醒等待的网络线程
-    notify();
+    _server.insertResponseQueue(std::move(resp));
 }
 
 void NetThread::notify()
 {
-    // 修改notify事件
-    std::int64_t data = std::int64_t(EPOLL_ET_NOTIFY) << 32;
-    _ep.mod(_notify.getFd(), data, EPOLLOUT);
+    _server.notify();
 }
 
 void NetThread::terminate()
@@ -192,51 +145,11 @@ void NetThread::terminate()
 }
 
 
-void NetThread::acceptConnection(epoll_event ev)
-{
-    int uid = ev.data.u32;
-
-    // 新的链接到来
-    if (ev.events & EPOLLIN)
-    {
-        auto itr = _listeners.find(uid);
-        if (itr != _listeners.end())
-        {
-            // 通过BindAdapter接收新的链接
-            while (itr->second->accept());
-            // 判断链接已经被完全接受完成
-            if (errno != EAGAIN && errno != EWOULDBLOCK)
-            {
-                std::cerr << "[NetThread::acceptConnection]: accept error, errno != EAGAIN or EWOULDBLOCK" << std::endl;
-            }
-        }
-        else
-        {
-            std::cerr << "[NetThread::acceptConnection]: not found BindAdapter" << std::endl;
-        }
-    }
-
-}
-
-void NetThread::addConnection(const TcpConnectionPtr& ptr)
+void NetThread::addConnection(const ConnectionPtr& ptr)
 {
     // 这里将ptr添加到网络线程的监听列表中， 并且此操作在当前网络线程执行
     auto task = [ptr, this](){
-        // 获取uid
-        auto id = this->_uidGen.popUid();
-        if (id < 0)
-        {
-            std::cerr << "[NetThread::addConnectionBySelf]: uid is not enough" << std::endl;
-        }
-
-        // 设置uid
-        ptr->setUid(id);
-        // 添加到connection表
-        this->_connections[id] = ptr;
-
-        // 将当前链接添加到ep监听中
-        this->_ep.add(ptr->getFd(), (std::int64_t(EPOLL_ET_NET)<<32) | id, EPOLLIN);
-        
+        _server.addConnection(ptr);
     };
     
     runTaskBySelf(std::move(task));
@@ -245,215 +158,17 @@ void NetThread::addConnection(const TcpConnectionPtr& ptr)
     notify();
 }
 
-void NetThread::processConnection(epoll_event ev)
-{
-    int uid = ev.data.u32;
-
-    auto conn = _connections.find(uid);
-    if (conn != _connections.end())
-    {
-        // 发生异常, 对端异常关闭
-        if ((ev.events & EPOLLERR) || (ev.events & EPOLLHUP))
-        {
-            std::cerr << "[NetThread::processConnection]: event is EPOLLERR or EPOLLHUP, client occur error" << std::endl;
-            closeConnection(uid);
-            return ;
-        }
-
-        // 对端正常关闭链接或者是 shutdown关闭写
-        if (ev.events & EPOLLRDHUP)
-        {
-            std::cout << "[NetThread::processConnection]: peer closed" << std::endl;
-            closeConnection(uid);
-            return;
-        }
-
-        // 进行数据的收发工作
-        if (ev.events & EPOLLIN)
-        {
-            // 有新数据到来
-            auto res = conn->second->recvData();
-            if (res == -1)
-            {
-                // 对端关闭
-                closeConnection(ConnectionBase::getUid());
-                std::cout << "[NetThread::processConnection]: NetThread[" << std::this_thread::get_id()
-                                    << "], conneciton-id:" << ConnectionBase::getUid() << " recv 0 bytes data, close connection" << std::endl;
-            }
-            else if (res == -2)
-            {
-                closeConnection(ConnectionBase::getUid());
-                std::cerr << "[NetThread::processConnection]: recv return -1 and errno = " << errno << std::endl;
-            }
-
-            // 检测收到包的 完整性
-            bool checkComplete = false;
-            do 
-            {
-                Hrpc_Buffer tmp;
-                checkComplete = conn->second->extractPackage(tmp);
-                if (tmp.size() != 0)
-                {
-                    // 有完整包，发往业务线程
-                    conn->second->sendRequest(std::move(tmp));
-                }
-
-            } while(checkComplete);
-        }
-        if (ev.events & EPOLLOUT)
-        {
-            // 发送数据
-            int res = conn->second->sendData();
-            if (res == -1)
-            {
-                // 对端关闭链接
-                closeConnection(ConnectionBase::getUid());
-                std::cout << "[NetThread::processConnection]: NetThread[" << std::this_thread::get_id()
-                            << "], conneciton-id:" << ConnectionBase::getUid() << " send 0 bytes data, close connection" << std::endl;
-            }
-            else if (res == -3)
-            {
-                // 异常情况
-                std::cerr << "[NetThread::processConnection]: occur error, send return -1, and errno = " << errno << std::endl;
-                closeConnection(ConnectionBase::getUid());
-            }
-            else if (res == 0)
-            {
-                // 删除对于可写事件的监听
-                _ep.mod(conn->second->getFd(), (std::int64_t(EPOLL_ET_NET) << 32) | conn->second->getUid(), EPOLLIN);
-            }
-        }
-    }
-    else
-    {
-        std::cerr << "[NetThread::processConnection]: invalid uid " << std::endl;
-    }
-    
-}
-
-
-void NetThread::processResponse()
-{
-    // 快速获取所有的待处理任务
-    std::queue<ResponsePtr> taskQueue;
-    _response_queue.swap(taskQueue, 0);
-
-    // 处理任务
-    while (!taskQueue.empty())
-    {
-        // 取出元素
-        auto task = std::move(taskQueue.front());
-        taskQueue.pop();
-        
-        TcpConnectionPtr conn;
-        auto itr = _connections.find(task->_uid);
-        if (itr == _connections.end() && task->_type != ResponseMessage::HRPC_RESPONSE_TASK)
-        {
-            std::cerr << "[NetThread::processResponse]: TcpConnection weak_ptr is invalid" << std::endl;
-            continue;
-        }
-        else
-        {
-            conn = itr->second;
-        }
-        
-
-        switch (task->_type)
-        {
-            case ResponseMessage::HRPC_RESPONSE_CLOSE:
-            {
-                closeConnection(conn->getUid());
-                std::cout << "[NetThread::processResponse]: server close the connection!" << std::endl;
-                break;
-            }
-            case ResponseMessage::HRPC_RESPONSE_NET:
-            {
-                // 处理当前链接需要发送的数据
-                auto buf = std::move(task->_buffer);
-
-                // 在这里发送数据
-                // 如果connection待发送缓冲区中还留存数据 则将 此数据压入connection的待发送缓冲区， 并监听对应socket的可写状态
-                // 如果connection待发送缓冲区中没有数据  则将此数据直接通过socket发送
-                if (conn->sendBufferSize() == 0)
-                {
-                    // bool res =conn->sendData(std::move(*buf));
-                    conn->pushData(std::move(*buf));
-                    int res = conn->sendData();
-                    if (res == -1)
-                    {
-                        // 对端关闭链接
-                        closeConnection(ConnectionBase::getUid());
-                        std::cout << "[NetThread::processResponse]: NetThread[" << std::this_thread::get_id()
-                                    << "], conneciton-id:" << ConnectionBase::getUid() << " send 0 bytes data, close connection" << std::endl;
-                    }
-                    else if (res == -3)
-                    {
-                        // 异常情况
-                        std::cerr << "[NetThread::processResponse]: occur error, send return -1, and errno = " << errno << std::endl;
-                        closeConnection(ConnectionBase::getUid());
-                    }
-                    else if (res == -2) // 数据还未发送完成
-                    {
-                        // 监听链接是否可写
-                        _ep.mod(conn->getFd(), (std::int64_t(EPOLL_ET_NET) << 32) | conn->getUid(), EPOLLIN | EPOLLOUT);    
-                    }
-                }
-                else
-                {
-                    // 新数据压到旧数据末尾
-                    conn->pushData(std::move(*buf));
-                }
-                break;
-            }
-            case ResponseMessage::HRPC_RESPONSE_TASK:
-            {
-                // 执行任务
-                if (task->_task)
-                {
-                    (*task->_task)();
-                }
-                else
-                {
-                    std::cerr << "[NetThread::processResponse]: when execute a task, the task-pointer is null" << std::endl;
-                }
-                break;
-            }
-            default:
-            {
-                std::cerr << "[NetThread::processResponse]: unkown response type" << std::endl;
-            }
-        };
-    }
-    
-}
-
 void NetThread::closeConnection(int uid)
 {
-    auto itr = _connections.find(uid);
-    if (itr != _connections.end())
-    {
-        auto conn = itr->second;
-        std::cout << "[NetThread::closeConnection]: NetThread[" << std::this_thread::get_id()
-                        << "], conneciton-id:" << conn->getUid() << "  closed" << std::endl;
-        // 从epoll中删除对于此链接的监听
-        _ep.del(conn->getFd());
-        // 从connections链表中删除此链接
-        _connections.erase(conn->getUid());
-
-        // 归还uid
-        _uidGen.pushUid(uid);
-    }
-    else
-    {
-        std::cerr << "[NetThread::closeConnection]: invalid uid " << std::endl;
-    }
+    _server.closeConnection(uid);
     
 }
 
 void NetThread::HeartCheckTask()
 {
     // 遍历一遍所有的connection， 寻找需要进行心跳检测的链接
-    for (auto& x : _connections)
+    auto& _connections = _server.getConnections();
+    for (auto x : _connections)
     {
         auto nowTime = Hrpc_Time::getNowTimeMs();
         
@@ -470,9 +185,73 @@ void NetThread::HeartCheckTask()
             }
 
             // 进行心跳检测
-            x.second->sendHeartCheck();
+
+            // 强制转化为TcpConnections
+            auto tcpConn = std::dynamic_pointer_cast<TcpConnection>(x.second);
+            tcpConn->sendHeartCheck();
         }
     }
+}
+
+
+void NetThread::acceptEvent(EpollerServer* server, const epoll_event& ev)
+{
+    int uid = ev.data.u32;
+
+    // 新的链接到来
+    if (ev.events & EPOLLIN)
+    {
+        auto itr = _listeners.find(uid);
+        if (itr != _listeners.end())
+        {
+            // 通过BindAdapter接收新的链接
+            while (itr->second->accept());
+            // 判断链接已经被完全接受完成
+            if (errno != EAGAIN && errno != EWOULDBLOCK)
+            {
+                std::cerr << "[NetThread::acceptEvent]: accept error, errno != EAGAIN or EWOULDBLOCK" << std::endl;
+            }
+        }
+        else
+        {
+            std::cerr << "[NetThread::acceptEvent]: not found BindAdapter" << std::endl;
+        }
+    }
+}   
+
+
+void NetThread::readEvent(EpollerServer* server, const ConnectionPtr& conn)
+{
+    // 有新数据到来
+    auto res = conn->recvData();
+    if (res == -1)
+    {
+        // 对端关闭
+        closeConnection(conn->getUid());
+        std::cout << "[NetThread::readEvent]: NetThread[" << std::this_thread::get_id()
+                            << "], conneciton-id:" << conn->getUid() << " recv 0 bytes data, close connection" << std::endl;
+    }
+    else if (res == -2)
+    {
+        closeConnection(conn->getUid());
+        std::cerr << "[NetThread::readEvent]: recv return -1 and errno = " << errno << std::endl;
+    }
+
+    // 检测收到包的 完整性
+    bool checkComplete = false;
+    do 
+    {
+        Hrpc_Buffer tmp;
+        checkComplete = conn->extractPackage(tmp);
+        if (tmp.size() != 0)
+        {
+            // 有完整包，发往业务线程
+            // conn->sendRequest(std::move(tmp));
+            auto tcpConn = std::dynamic_pointer_cast<TcpConnection>(conn);
+            tcpConn->sendRequest(std::move(tmp));
+        }
+
+    } while(checkComplete);
 }
 
 NetThread::~NetThread()

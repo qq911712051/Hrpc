@@ -11,6 +11,7 @@
 #include <map>
 
 #include <hrpc_thread.h>
+#include <hrpc_atomic.h>
 #include <hrpc_socket.h>
 #include <hrpc_lock.h>
 #include <hrpc_epoller.h>
@@ -23,6 +24,7 @@
 #include <TcpConnection.h>
 #include <BindAdapter.h>
 #include <common.h>
+#include <EpollerServer.h>
 
 namespace Hrpc
 {
@@ -46,15 +48,6 @@ public:
  */
 class NetThread : public Hrpc_Thread
 {
-    enum
-    {
-        EPOLL_ET_LISTEN = 1,   // 监听fd上面有事件
-        EPOLL_ET_NOTIFY,       // 用于将网络线程从epoll_wait中唤醒
-        EPOLL_ET_CLOSE,        // 用于终止网络线程
-        EPOLL_ET_NET           // 客户端有数据到来
-    };
-public:
-    typedef Hrpc_Queue<ResponsePtr> response_queue_type;
 public:
     
     /**
@@ -102,7 +95,7 @@ public:
      * @param: ptr 一条网络链接
      * @return: 
      */
-    void addConnection(const TcpConnectionPtr& ptr);
+    void addConnection(const ConnectionPtr& ptr);
 
 
     /**
@@ -145,56 +138,36 @@ private:
      */
     void HeartCheckTask();
 
-
-
     /**
-     * @description: 处理监听端口事件 
-     * @param: ev 接受到的事件
-     * @return: 
-     */
-    void acceptConnection(epoll_event ev);
-
-    /**
-     * @description: 处理来自客户端链接的事件
-     * @param: ev  接受到的事件
-     * @return: 
-     */
-    void processConnection(epoll_event ev);
-
-    /**
-     * @description: 触发shutdown事件
+     * @description: 触发shutdown事件的回调函数
      * @param {type} 
      * @return: 
      */
-    void closeEvent() {}
+    void closeEvent(EpollerServer* server) {}
 
     /**
-     * @description: 将业务线程的响应包返回到客户端 
+     * @description: 新连接到来时的回调
      * @param {type} 
      * @return: 
      */
-    void processResponse();
+    void acceptEvent(EpollerServer* server, const epoll_event& ev);
+
+    /**
+     * @description: 有数据到来时触发的函数
+     * @param {type} 
+     * @return: 
+     */
+    void readEvent(EpollerServer* server, const ConnectionPtr& conn);
+
 private:
     NetThreadGroup*                 _threadGroup;   // 管理当前网络线程的线程组
-            
-    Hrpc_Epoller                    _ep;            // 管理当前网络线程的fd
-    int                             _waitTime = {10};      // epoll_wait时等待的时间
+    
+    EpollerServer                   _server;        // epollServer核心类
     int                             _heartTime = {2000};     // 心跳检测时间， 一个connection的不活动时间超过_heartTime, 就会对其发送心跳检测
 
-    response_queue_type             _response_queue;    // 网络线程待处理队列
+    std::map<int, BindAdapter*>     _listeners;     // uid对应的BindAdapter
+    Hrpc_Atomic                     _seq = {0};     // bindAdapter的自增序号
 
-    Hrpc_Timer                      _timer;         // 定时器， 每次epoll_wait结束以后检测当前timer是否有时间发生.
-
-    Hrpc_Socket                     _shutdown;      // 用于终止网络线程运行
-
-    Hrpc_Socket                     _notify;        // 唤醒阻塞在epoll_wait中的网络线程
-    
-    std::map<int, TcpConnectionPtr> _connections;   // uid对应的TcpConnection
-    std::map<int, BindAdapter*>   _listeners;     // uid对应的BindAdapter
-
-    UidGenarator                    _uidGen;        // uid生成器  
-
-    size_t                          _Max_connections;   // 最大连接数
     bool                            _terminate;     // 网络线程是否停止
 };
 
@@ -213,10 +186,7 @@ Hrpc_Timer::TimerId NetThread::runTaskBySelf(Func&& f, Args&&... args)
     
     resp->_task = std::unique_ptr<ResponseMessage::Task>(new ResponseMessage::Task(std::move(task)));
 
-    _response_queue.push(std::move(resp));
-
-    // 将网络线程从epoll_wait中唤醒
-    notify();
+    _server.insertResponseQueue(std::move(resp));
 }
 }
 #endif

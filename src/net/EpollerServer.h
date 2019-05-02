@@ -25,6 +25,7 @@ namespace Hrpc
  */
 class EpollerServer
 {
+public:
     enum
     {
         EPOLL_ET_LISTEN = 1,   // 监听fd上面有事件
@@ -41,14 +42,14 @@ public:
     
 public:
 
-    EpollerServer(size_t maxConn = 1024, int waitTime = 10);
+    EpollerServer() = default;
 
     /**
      * @description: 初始化EpollerServer 
      * @param {type} 
      * @return: 
      */
-    void init();
+    void init(size_t maxConn = 1024, int waitTime = 10);
 
     /**
      * @description: 处理新的链接到来
@@ -134,7 +135,14 @@ public:
      * @return: 
      */
     void closeConnection(int uid);
+
     
+    /**
+     * @description: 返回所有connections的引用
+     * @param {type} 
+     * @return: 
+     */
+    std::map<int, ConnectionPtr>& getConnections() {return _connections;}
 private:
     /**
      * @description: 处理 消息队列中任务
@@ -183,7 +191,7 @@ template<typename Func, typename... Args>
 Hrpc_Timer::TimerId EpollerServer::addTimerTaskRepeat(size_t after, size_t dura, Func&& f, Args&&... args)
 {
     auto func = std::bind(std::forward<Func>(f), std::forward<Args>(args)...);
-    return _timer.addTaskOnce(after, dura, std::move(func));
+    return _timer.addTaskRepeat(after, dura, std::move(func));
 }
 
 }

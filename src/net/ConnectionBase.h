@@ -20,7 +20,7 @@ class ConnectionBase
 public:
     ConnectionBase() = default;
 
-    ~ConnectionBase();
+    virtual ~ConnectionBase();
     
     ConnectionBase(int fd, size_t buflen = 1024);
 

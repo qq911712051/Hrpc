@@ -24,11 +24,6 @@ TcpConnection::~TcpConnection()
 {
 }
 
-void TcpConnection::pushDataInSendBuffer(Hrpc_Buffer&& data)
-{
-    // _base.pushData(std::move(data));
-    ConnectionBase::pushData(std::move(data));
-}
 
 void TcpConnection::sendResponse(Hrpc_Buffer&& msg)
 {

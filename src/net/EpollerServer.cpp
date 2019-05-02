@@ -1,4 +1,5 @@
 #include <memory>
+#include <thread>
 
 #include <hrpc_exception.h>
 
@@ -6,7 +7,8 @@
 
 namespace Hrpc
 {
-EpollerServer::EpollerServer(size_t maxConn, int waitTime)
+
+void EpollerServer::init(size_t maxConn, int waitTime)
 {
     if (maxConn <= 0)
     {
@@ -25,11 +27,7 @@ EpollerServer::EpollerServer(size_t maxConn, int waitTime)
     {
         _waitTime = waitTime;
     }
-    
-}
 
-void EpollerServer::init()
-{
     // 初始化uid生成
     _uidGen.init(_Max_connections);
 
@@ -306,7 +304,7 @@ void EpollerServer::processConnection(epoll_event ev)
         {
             if (_recvCallback)
             {
-                _recvCallback(this, conn);
+                _recvCallback(this, conn->second);
             }
             else
             {
@@ -321,7 +319,7 @@ void EpollerServer::processConnection(epoll_event ev)
             if (res == -1)
             {
                 // 对端关闭链接
-                closeConnection(conn->getUid());
+                closeConnection(conn->second->getUid());
                 std::cout << "[EpollerServer::processConnection]: NetThread[" << std::this_thread::get_id()
                             << "], conneciton-id:" << conn->second->getUid() << " send 0 bytes data, close connection" << std::endl;
             }

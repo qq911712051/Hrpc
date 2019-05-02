@@ -55,7 +55,7 @@ void BindAdapter::initialize()
 
 bool BindAdapter::accept()
 {
-    TcpConnectionPtr ptr;
+    ConnectionPtr ptr;
     try
     {
         Hrpc_Socket sock;
@@ -75,7 +75,9 @@ bool BindAdapter::accept()
         // 设置TcpConnection的所属的网络线程
         NetThread* dest = _threadGroup->getNetThreadByRound();
 
-        ptr->setNetThread(dest);
+        // 动态转换
+        auto tcpConn = std::dynamic_pointer_cast<TcpConnection>(ptr);
+        tcpConn->setNetThread(dest);
         // 添加此connection到对应的网络线程
         dest->addConnection(ptr);
     }
