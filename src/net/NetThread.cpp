@@ -234,7 +234,7 @@ void NetThread::readEvent(EpollerServer* server, const ConnectionPtr& conn)
     else if (res == -2)
     {
         closeConnection(conn->getUid());
-        std::cerr << "[NetThread::readEvent]: recv return -1 and errno = " << errno << std::endl;
+        std::cerr << "[NetThread::readEvent]: recv return -2 and errno = " << errno << std::endl;
     }
 
     // 检测收到包的 完整性

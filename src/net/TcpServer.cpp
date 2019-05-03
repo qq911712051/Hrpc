@@ -119,34 +119,6 @@ void TcpServer::loadConfig(const std::string& file)
     _config.parse(file);
 }
 
-template<class Protocol>
-void TcpServer::addHandleProtocol(const std::string& object)
-{
-    auto itr = _bindAdapterFactory.find(object);
-    if (itr != _bindAdapterFactory.end())
-    {
-        itr->second->addProtocol<Protocol>();
-    }
-    else
-    {
-        throw Hrpc_TcpServerException("[TcpServer::addHandleProtocol]: not found BindAdapter [" + object + "]");
-    }
-    
-}
-
-template<class Protocol>
-void TcpServer::setHeartProtocol(const std::string& object)
-{
-    auto itr = _bindAdapterFactory.find(object);
-    if (itr != _bindAdapterFactory.end())
-    {
-        itr->second->setHeartProtocol<Protocol>();
-    }
-    else
-    {
-        throw Hrpc_TcpServerException("[TcpServer::setHeartProtocol]: not found BindAdapter [" + object + "]");
-    }
-}
 
 TcpServer::~TcpServer()
 {
@@ -176,6 +148,35 @@ bool TcpServer::checkStatus()
             return false;
     }
     return true;
+}
+
+
+void TcpServer::addHandleProtocol(const std::string& object, std::unique_ptr<Hrpc_BaseProtocol>&& protocol)
+{
+    auto itr = _bindAdapterFactory.find(object);
+    if (itr != _bindAdapterFactory.end())
+    {
+        itr->second->addProtocol(std::move(protocol));
+    }
+    else
+    {
+        throw Hrpc_TcpServerException("[TcpServer::addHandleProtocol]: not found BindAdapter [" + object + "]");
+    }
+    
+}
+
+
+void TcpServer::setHeartProtocol(const std::string& object, std::unique_ptr<Hrpc_BaseProtocol>&& protocol)
+{
+    auto itr = _bindAdapterFactory.find(object);
+    if (itr != _bindAdapterFactory.end())
+    {
+        itr->second->setHeartProtocol(protocol);
+    }
+    else
+    {
+        throw Hrpc_TcpServerException("[TcpServer::setHeartProtocol]: not found BindAdapter [" + object + "]");
+    }
 }
 
 }

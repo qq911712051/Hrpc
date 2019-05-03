@@ -18,6 +18,7 @@ namespace Hrpc
  */
 class HeartProtocol : public Hrpc_BaseProtocol
 {
+public:
     enum 
     {
         HEART_REQUEST = 1,  // 协议包 请求状态
@@ -51,6 +52,13 @@ public:
      * @return: 
      */
     static Hrpc_Buffer doRequest();
+
+    /**
+     * @description: 封装一个心跳的响应包
+     * @param {type} 
+     * @return: 
+     */
+    static Hrpc_Buffer makeResponse();
 private:
 
     /**

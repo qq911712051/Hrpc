@@ -37,6 +37,7 @@ public:
      * @return: 
      */
     Hrpc_Thread() : _running(false), _tid(0) {} 
+    ~Hrpc_Thread() = 0;
 
     /**
      * @description: 新建线程并执行 

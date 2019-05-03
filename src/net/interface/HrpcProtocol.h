@@ -54,6 +54,15 @@ public:
     void setHandleObject(std::unique_ptr<HandleBase>&& handle);
 
     /**
+     * @description: 包装成一个Hrpc请求
+     * @param: body Hrpc协议体 
+     * @param: seq  hrpc请求包序号 
+     * @param: type hrpc请求的类型 
+     * @return: 
+     */
+    static Hrpc_Buffer makeRequest(Hrpc_Buffer&& body, int seq, std::int8_t type);
+
+    /**
      * @description: 获取协议名称
      * @param {type} 
      * @return: 

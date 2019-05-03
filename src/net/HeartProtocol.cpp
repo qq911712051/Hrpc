@@ -78,4 +78,20 @@ bool HeartProtocol::extract(Hrpc_Buffer&& msg, std::int8_t& status, Hrpc_Buffer&
     return true;
 }
 
+Hrpc_Buffer HeartProtocol::makeResponse()
+{
+    Hrpc_Buffer res;
+    std::int8_t status = HEART_RESPONSE;
+    std::int8_t length = _name.size();
+
+    res.appendInt8(length); // 写入名称长度
+    res.write(_name);   // 写入名称
+    res.appendInt8(status); // 写入请求状态
+    
+    int now = Hrpc_Time::getNowTime();
+    res.appendInt32(now);
+    
+    return std::move(res);
+}
+
 }

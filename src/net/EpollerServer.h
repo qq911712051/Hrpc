@@ -143,6 +143,13 @@ public:
      * @return: 
      */
     std::map<int, ConnectionPtr>& getConnections() {return _connections;}
+
+    /**
+     * @description: 通过uid获取链接 
+     * @param {type} 
+     * @return: 
+     */
+    ConnectionPtr getConnectionByUid(int uid);
 private:
     /**
      * @description: 处理 消息队列中任务

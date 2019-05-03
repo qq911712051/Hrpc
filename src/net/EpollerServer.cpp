@@ -262,13 +262,14 @@ void EpollerServer::addConnection(const ConnectionPtr& conn)
         std::cerr << "[EpollerServer::addConnection]: uid is not enough" << std::endl;
     }
 
-    // 设置uid
-    conn->setUid(id);
-    // 添加到connection表
-    _connections[id] = conn;
-
     // 将当前链接添加到ep监听中
     _ep.add(conn->getFd(), (std::int64_t(EPOLL_ET_NET)<<32) | id, EPOLLIN);
+    
+    // 设置uid
+    conn->setUid(id);
+
+    // 添加到connection表
+    _connections[id] = conn;
 }
 
 void EpollerServer::addListen(int fd, size_t data)
@@ -343,5 +344,15 @@ void EpollerServer::processConnection(epoll_event ev)
     
 }
 
+ConnectionPtr EpollerServer::getConnectionByUid(int uid)
+{
+    auto itr = _connections.find(uid);
+    if (itr != _connections.end())
+    {
+        return itr->second;
+    }
+
+    return ConnectionPtr();
+}
 
 }

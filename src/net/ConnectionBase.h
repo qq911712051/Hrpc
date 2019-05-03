@@ -11,6 +11,7 @@
 
 #include <hrpc_socket.h>
 #include <hrpc_buffer.h>
+#include <hrpc_lock.h>
 #include <hrpc_exception.h>
 namespace Hrpc
 {
@@ -104,7 +105,14 @@ public:
      * @param {type} 
      * @return: 
      */
-    void setUid(int uid) {_uid = uid;}
+    void setUid(int uid);
+
+    /**
+     * @description: 等待此链接uid生效 
+     * @param {type} 
+     * @return: 
+     */
+    void waitForUidValid();
 
     /**
      * @description: 获取当前connection的uid
@@ -145,6 +153,7 @@ private:
     size_t          _lastActivity = {0};  // 最后的活动时间
     bool            _close = {false};         // 当前链接是否已经失效
     int             _uid = {-1};           // 标识此链接在某个网络线程中的uid
+    Hrpc_ThreadLock _lock;                  // 用于同步uid, uid更新时， 表示此链接已经别 epoll监管
 
     char*           _tmpBuffer = {nullptr}; // 作为临时缓冲区使用， 避免频繁的内存分配
     int             _bufferLen = {1024}; // 临时缓冲区的长度

@@ -100,6 +100,7 @@ Hrpc_Buffer HrpcProtocol::addProtocolHeadMsg(Hrpc_Buffer&& buf, std::int32_t seq
     // 1bytes 协议名称长度 + 协议的名称
     if (buf.beforeSize() >= 5 + _name.size())
     {
+        buf.appendFrontInt8(HrpcProtocol::HRPC_RESPONSE);
         buf.appendFrontInt32(seq);
         buf.appendFront("HRPC");
         buf.appendFrontInt8(4);
@@ -111,8 +112,38 @@ Hrpc_Buffer HrpcProtocol::addProtocolHeadMsg(Hrpc_Buffer&& buf, std::int32_t seq
         res.appendInt8(4);
         res.write("HRPC");
         res.appendInt32(seq);
+        res.appendInt8(HrpcProtocol::HRPC_RESPONSE);
         res.pushData(std::move(buf));
 
+        return std::move(res);
+    }
+    return Hrpc_Buffer();
+}
+
+Hrpc_Buffer HrpcProtocol::makeRequest(Hrpc_Buffer&& body, int seq, std::int8_t type)
+{
+    int headTotal = 1 + HrpcProtocol::getName().size() + 4 + 1;
+    if (body.beforeSize() >= headTotal)
+    {
+        // 压入请求类型
+        body.appendFrontInt8(type);
+        // 压入序列号
+        body.appendFrontInt32(seq);
+        // 协议头部
+        body.appendFront("HRPC");
+        body.appendInt8(4);
+        
+        return std::move(body);
+    }
+    else
+    {
+        Hrpc_Buffer res;
+        res.appendInt8(4);
+        res.appendFront("HRPC");
+        res.appendFrontInt32(seq);
+        res.appendFrontInt8(type);
+        
+        res.pushData(std::move(body));
         return std::move(res);
     }
     return Hrpc_Buffer();

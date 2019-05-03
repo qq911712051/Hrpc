@@ -57,16 +57,14 @@ public:
      * @param: object 端口对象名称
      * @return: 
      */
-    template<class Protocol>
-    void addHandleProtocol(const std::string& object);
+    void addHandleProtocol(const std::string& object, std::unique_ptr<Hrpc_BaseProtocol>&&);
 
     /**
      * @description: 为业务线程设置心跳协议 
      * @param {type} 
      * @return: 
      */
-    template<class Protocol>
-    void setHeartProtocol(const std::string& object);
+    void setHeartProtocol(const std::string& object, std::unique_ptr<Hrpc_BaseProtocol>&&);
 
     /**
      * @description: 进行一些初始化操作， 申请一些资源等等
@@ -128,5 +126,6 @@ private:
     
     
 };
+
 }
 #endif

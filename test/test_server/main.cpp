@@ -8,6 +8,7 @@ class MyApp : public TcpServer
 public:
     void intialize() override
     {
+        
         std::cout << "call user define intilize" << std::endl;
     }
     void destroy() override

@@ -43,7 +43,7 @@ public:
      * @param: before   buffer前面预留的大小， 方便直接向前插入数据
      * @return: 
      */
-    Hrpc_Buffer(size_t size = 256, size_t before = 16);
+    Hrpc_Buffer(size_t size = 256, size_t before = 32);
 
     /**
      * @description: 移动构造函数

@@ -33,8 +33,8 @@ void HrpcClient::intialize()
         throw Hrpc_Exception("[HrpcClient::intialize]: not found config file");
     }
     // 初始化网络线程组等等
-    _netGroup = ThreadGroupPtr(new ClientNetThreadGroup(_config));
-    _netGroup->intialize();
+    _netGroup = ThreadGroupPtr(new ClientNetThreadGroup);
+    _netGroup->intialize(_config);
     _netGroup->start();
     
     _isInitialize = true;
@@ -65,5 +65,10 @@ bool HrpcClient::check(const std::string& objectName, std::string& object, std::
     }
     object = objectName;
     return false;
+}
+
+void HrpcClient::terminate()
+{
+    _netGroup->terminate();
 }
 }

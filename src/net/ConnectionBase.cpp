@@ -1,3 +1,5 @@
+#include <mutex>
+
 #include <hrpc_time.h>
 
 #include <ConnectionBase.h>
@@ -215,5 +217,24 @@ void ConnectionBase::processError(int type)
         std::cerr << "[ConnecitonBase::processError]: can't process the error, clear the recv_buffer" << std::endl;
     }
     
+}
+
+void ConnectionBase::setUid(int uid)
+{
+    std::lock_guard<Hrpc_ThreadLock> sync(_lock);
+    _uid = uid;
+    _lock.notify();   
+}
+void ConnectionBase::waitForUidValid()
+{
+    if (_uid != -1)
+        return;
+    
+    std::lock_guard<Hrpc_ThreadLock> sync(_lock);
+    while (_uid == -1)
+    {
+        _lock.wait();
+    }
+
 }
 }

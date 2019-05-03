@@ -48,6 +48,13 @@ public:
      */
     template<typename ObjectT>
     ObjectT* stringToProxy(const std::string& objectName);
+
+    /**
+     * @description: 关闭Hrpc客户端, 包括所有网络线程 
+     * @param {type} 
+     * @return: 
+     */
+    void terminate();
 private:
     /**
      * @description: 初始化整个hrpc客户端
@@ -106,10 +113,16 @@ ObjectT* HrpcClient::stringToProxy(const std::string& objectName)
             throw Hrpc_Exception("[HrpcClient::stringToProxy]: objectName format error, objectName = [" + objectName + "]");
         }
         // 生成新的proxy
-        auto proxy = ProxyPtr(new ObjectProxy(_netGroup.get(), ip, port));
+        auto proxy = ProxyPtr(new ObjectProxy(_netGroup.get(), object, ip, port));
         auto oPtr = proxy.get();
         {
             std::lock_guard<std::mutex> sync(_lock);
+            auto itr = _objectFactory.find(objectName);
+            if (itr != _objectFactory.end())
+            {
+                // 将其强制转化为 派生类对象
+                return (ObjectT*)itr->second.get();
+            }
             _objectFactory[objectName] = std::move(proxy);
         }
         return (ObjectT*)oPtr;
@@ -134,10 +147,16 @@ ObjectT* HrpcClient::stringToProxy(const std::string& objectName)
                     throw Hrpc_Exception("[HrpcClient::stringToProxy]: objectProxy[" + objectName + "] config error");
                 }
 
-                auto proxy = ProxyPtr(new ObjectProxy(_netGroup.get(), ip, port));
+                auto proxy = ProxyPtr(new ObjectProxy(_netGroup.get(), objectName, ip, port));
                 auto oPtr = proxy.get();
                 {
                     std::lock_guard<std::mutex> sync(_lock);
+                    auto itr = _objectFactory.find(objectName);
+                    if (itr != _objectFactory.end())
+                    {
+                        // 将其强制转化为 派生类对象
+                        return (ObjectT*)itr->second.get();
+                    }
                     _objectFactory[objectName] = std::move(proxy);    
                 }
                 return (ObjectT*)oPtr;

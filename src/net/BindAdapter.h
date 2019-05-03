@@ -114,16 +114,14 @@ public:
      * @param {type} 
      * @return: 
      */
-    template<typename Protocol>
-    void addProtocol();
+    void addProtocol(std::unique_ptr<Hrpc_BaseProtocol>&&);
 
     /**
      * @description: 设置心跳协议 
      * @param {type} 
      * @return: 
      */
-    template<typename Protocol>
-    void setHeartProtocol();
+    void setHeartProtocol(std::unique_ptr<Hrpc_BaseProtocol>&&);
 
     /**
      * @description: 判断业务线程是否正在运行 
@@ -149,23 +147,7 @@ private:
 
 };
 
-template<typename Protocol>
-void BindAdapter::addProtocol()
-{
-    for (auto& handle : _handles)
-    {
-        handle->addHandleProtocol(HandleThread::Protocol(new Protocol), Protocol::getName());
-    }
-}
 
-template<typename Protocol>
-void BindAdapter::setHeartProtocol()
-{
-    for (auto& handle : _handles)
-    {
-        handle->setHeartProtocol(HandleThread::Protocol(new Protocol));
-    }
-}
 
 }
 #endif
