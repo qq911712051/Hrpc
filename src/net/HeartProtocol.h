@@ -38,7 +38,7 @@ public:
      * @param {type} 
      * @return: 
      */
-    static std::string getName() {return _name;};
+    std::string getName() override {return _name;};
     /**
      * @description: 析构函数
      * @param {type} 

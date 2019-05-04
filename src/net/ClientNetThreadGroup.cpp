@@ -20,7 +20,7 @@ void ClientNetThreadGroup::intialize(const Hrpc_Config& config)
     // 新建网络线程
     for (int i = 0; i < _num; i++)
     {
-        _threads.push_back(ClientNetThreadPtr(new ClientNetThread));
+        _threads.push_back(ClientNetThreadPtr(new ClientNetThread(this)));
     }
 
     // 初始化

@@ -41,25 +41,28 @@ Hrpc_Buffer::~Hrpc_Buffer()
     }
 }
 
-bool Hrpc_Buffer::write(const std::string& data)
+bool Hrpc_Buffer::write(const std::string& data, bool flag)
 {
-    return write(data.c_str(), data.size());
+    return write(data.c_str(), data.size(), flag);
 }
 
-bool Hrpc_Buffer::write(const char* begin, const char* end)
+bool Hrpc_Buffer::write(const char* begin, const char* end, bool flag)
 {
-    return write(begin, end - begin);
+    return write(begin, end - begin, flag);
 }
 
-bool Hrpc_Buffer::write(const char* data, int len)
+bool Hrpc_Buffer::write(const char* data, int len, bool flag)
 {
     if (!_buffer)
         throw Hrpc_BufferException("[Hrpc_Buffer::write]: _buffer is null");
     if (len < 0)
         len = ::strlen(data);
 
-    optimizeSpace();
-
+    // 如果允许空间优化
+    if (flag)
+    {
+        optimizeSpace();
+    }
     size_t free = freeSize();
     if (len <= free)
     {
@@ -88,9 +91,9 @@ bool Hrpc_Buffer::write(const char* data, int len)
 }
 
 
-void Hrpc_Buffer::pushData(Hrpc_Buffer&& buf)
+void Hrpc_Buffer::pushData(Hrpc_Buffer&& buf, bool flag)
 {
-    write(buf.begin(), buf.end());
+    write(buf.begin(), buf.end(), flag);
 }
 
 bool Hrpc_Buffer::expandBuffer(size_t len)
@@ -219,17 +222,49 @@ bool Hrpc_Buffer::appendFrontInt32(int data)
 
     return true;    
 }
+bool Hrpc_Buffer::appendFrontFloat(float data)
+{
+    if (!_buffer)
+        throw Hrpc_BufferException("[Hrpc_Buffer::appendFrontFloat]: _buffer is null");
+    if (_cur < 4)
+        return false;
 
-bool Hrpc_Buffer::appendInt32(int data)
+    std::int32_t data1 = *((std::int32_t*)&data);
+    std::int32_t res = Hrpc_Common::htonInt32(data1);
+    
+    // 移动游标
+    _cur -= 4;
+
+    ::memcpy(_buffer + _cur, (void*)&res, sizeof(res));
+
+    return true;    
+}
+
+bool Hrpc_Buffer::appendInt32(int data, bool flag)
 {
     if (!_buffer)
         throw Hrpc_BufferException("[Hrpc_Buffer::appendInt32]: _buffer is null");
-    if (freeSize() < 4)
-        return false;
 
     std::int32_t res = Hrpc_Common::htonInt32(data);
     
-    write((char*)&res, sizeof(res));
+    write((char*)&res, sizeof(res), flag);
+    
+    // ::memcpy(_buffer + _end, (void*)&res, sizeof(res));
+    // // 移动游标
+    // _end += 4;
+
+    return true;
+}
+
+bool Hrpc_Buffer::appendFloat(float data, bool flag)
+{
+    if (!_buffer)
+        throw Hrpc_BufferException("[Hrpc_Buffer::appendFloat]: _buffer is null");
+
+    std::int32_t data1 = *((std::int32_t*)&data);
+    std::int32_t res = Hrpc_Common::htonInt32(data1);
+    
+    write((char*)&res, sizeof(res), flag);
     
     // ::memcpy(_buffer + _end, (void*)&res, sizeof(res));
     // // 移动游标
@@ -255,16 +290,46 @@ bool Hrpc_Buffer::appendFrontInt16(std::int16_t data)
     return true;    
 }
 
-bool Hrpc_Buffer::appendInt16(std::int16_t data)
+bool Hrpc_Buffer::appendInt16(std::int16_t data, bool flag)
 {
     if (!_buffer)
         throw Hrpc_BufferException("[Hrpc_Buffer::appendInt16]: _buffer is null");
-    if (freeSize() < 2)
-        return false;
 
     std::int16_t res = Hrpc_Common::htonInt16(data);
     
-    write((char*)&res, sizeof(res));
+    write((char*)&res, sizeof(res), flag);
+
+    // ::memcpy(_buffer + _end, (void*)&res, sizeof(res));
+    // // 移动游标
+    // _end += 2;
+
+    return true;
+}
+
+bool Hrpc_Buffer::appendFrontInt64(std::int64_t data)
+{
+    if (!_buffer)
+        throw Hrpc_BufferException("[Hrpc_Buffer::appendFrontInt64]: _buffer is null");
+    if (_cur < 8)
+        return false;
+
+    std::int64_t res = Hrpc_Common::htonInt64(data);
+    
+    // 移动游标
+    _cur -= 8;
+
+    ::memcpy(_buffer + _cur, (void*)&res, sizeof(res));
+
+    return true;    
+}
+bool Hrpc_Buffer::appendInt64(std::int64_t data, bool flag)
+{
+    if (!_buffer)
+        throw Hrpc_BufferException("[Hrpc_Buffer::appendInt64]: _buffer is null");
+
+    std::int64_t res = Hrpc_Common::htonInt64(data);
+    
+    write((char*)&res, sizeof(res), flag);
 
     // ::memcpy(_buffer + _end, (void*)&res, sizeof(res));
     // // 移动游标
@@ -288,14 +353,12 @@ bool Hrpc_Buffer::appendFrontInt8(std::int8_t data)
     return true;    
 }
 
-bool Hrpc_Buffer::appendInt8(std::int8_t data)
+bool Hrpc_Buffer::appendInt8(std::int8_t data, bool flag)
 {
     if (!_buffer)
         throw Hrpc_BufferException("[Hrpc_Buffer::appendInt8]: _buffer is null");
-    if (freeSize() < 1)
-        return false;
     
-    write((char*)&data, sizeof(data));
+    write((char*)&data, sizeof(data), flag);
 
     // ::memcpy(_buffer + _end, (void*)&data, sizeof(data));
     // // 移动游标
@@ -305,40 +368,30 @@ bool Hrpc_Buffer::appendInt8(std::int8_t data)
 }
 
 std::int32_t Hrpc_Buffer::peekFrontInt32() const
+{   
+    return peekInt32From(0);
+}
+
+float Hrpc_Buffer::peekFrontFloat() const
 {
-    if (!_buffer)
-        throw Hrpc_BufferException("[Hrpc_Buffer::peekFrontInt32]: _buffer is null");
-    if (size() < 4)
-        return 0;
-    
-    std::int32_t origin = *(std::int32_t*)(_buffer + _cur);
-    
-    return Hrpc_Common::ntohInt32(origin);
+    std::int32_t res = peekInt32From(0);
+    return *(float*)&res;
+}
+
+std::int64_t Hrpc_Buffer::peekFrontInt64() const
+{
+    return peekInt64From(0);
 }
 
 std::int16_t Hrpc_Buffer::peekFrontInt16() const
 {
-    if (!_buffer)
-        throw Hrpc_BufferException("[Hrpc_Buffer::peekFrontInt16]: _buffer is null");
-    if (size() < 2)
-        return 0;
-    
-    std::int16_t origin = *(std::int16_t*)(_buffer + _cur);
-    
-    return Hrpc_Common::ntohInt16(origin);
+    return peekInt16From(0);
 }
 
 std::int8_t Hrpc_Buffer::peekFrontInt8() const
 {
 
-    if (!_buffer)
-        throw Hrpc_BufferException("[Hrpc_Buffer::peekFrontInt8]: _buffer is null");
-    if (size() < 1)
-        return 0;
-    
-    std::int8_t origin = *(std::int8_t*)(_buffer + _cur);
-    
-    return origin;
+    return peekInt8From(0);
 }
 
 std::string Hrpc_Buffer::toByteString() const
@@ -386,7 +439,7 @@ std::string Hrpc_Buffer::get(size_t pos, size_t len) const
     if (!_buffer)
         throw Hrpc_BufferException("[Hrpc_Buffer::get]: _buffer is null");
 
-    if (pos + len > freeSize())
+    if (pos + len > _end)
         return "";
     
     return std::string(_buffer + _cur + pos, _buffer + _cur + pos + len);
@@ -399,7 +452,7 @@ Hrpc_Buffer Hrpc_Buffer::getToBuffer(size_t pos, size_t len) const
     if (!_buffer)
         throw Hrpc_BufferException("[Hrpc_Buffer::getToBuffer]: _buffer is null");
 
-    if (pos + len > freeSize())
+    if (pos + len > _end)
         return Hrpc_Buffer(32);
     
     Hrpc_Buffer res(len);
@@ -457,6 +510,108 @@ bool Hrpc_Buffer::appendFront(const std::string& data)
     }
     return true;
 }
+bool Hrpc_Buffer::overWriteInt16(size_t pos, const std::int16_t& data)
+{
+    if (pos + 2 > size())
+    {
+        return false;
+    }
+    
+    auto oldEnd = _end;
+    _end = _cur + pos;
+    // 写入数据
+    appendInt16(data, false);
 
+    // 回复游标
+    _end = oldEnd;
+    return true;
+}
+bool Hrpc_Buffer::overWriteInt32(size_t pos, const std::int32_t& data)
+{
+    if (pos + 4 > size())
+    {
+        return false;
+    }
+    
+    auto oldEnd = _end;
+    _end = _cur + pos;
+    // 写入数据
+    appendInt32(data, false);
+
+    // 回复游标
+    _end = oldEnd;
+    return true;
+}
+bool Hrpc_Buffer::overWriteInt64(size_t pos, const std::int64_t& data)
+{
+    if (pos + 8 > size())
+    {
+        return false;
+    }
+    
+    auto oldEnd = _end;
+    _end = _cur + pos;
+    // 写入数据
+    appendInt64(data, false);
+
+    // 回复游标
+    _end = oldEnd;
+    return true;
+}
+bool Hrpc_Buffer::overWriteInt8(size_t pos, const std::int8_t& data)
+{
+    if (pos + 1 > size())
+    {
+        return false;
+    }
+    
+    auto oldEnd = _end;
+    _end = _cur + pos;
+    // 写入数据
+    appendInt8(data, false);
+
+    // 回复游标
+    _end = oldEnd;
+    return true;
+}
+
+std::int8_t Hrpc_Buffer::peekInt8From(size_t pos) const
+{
+    if (pos < 0 || _end - pos < 1)
+    {
+        throw Hrpc_Exception("[Hrpc_Buffer::peekInt8From]: peek error");
+    }
+    return *(std::int8_t*)(_buffer + _cur + pos);
+}
+std::int16_t Hrpc_Buffer::peekInt16From(size_t pos) const
+{
+    if (pos < 0 || _end - pos < 2)
+    {
+        throw Hrpc_Exception("[Hrpc_Buffer::peekInt16From]: peek error");
+    }
+    std::int16_t origin = *(std::int16_t*)(_buffer + _cur + pos);
+    
+    return Hrpc_Common::ntohInt16(origin);
+}
+std::int32_t Hrpc_Buffer::peekInt32From(size_t pos) const
+{
+    if (pos < 0 || _end - pos < 4)
+    {
+        throw Hrpc_Exception("[Hrpc_Buffer::peekInt32From]: peek error");
+    }
+    std::int32_t origin = *(std::int32_t*)(_buffer + _cur + pos);
+    
+    return Hrpc_Common::ntohInt32(origin);
+}
+std::int64_t Hrpc_Buffer::peekInt64From(size_t pos) const
+{
+    if (pos < 0 || _end - pos < 8)
+    {
+        throw Hrpc_Exception("[Hrpc_Buffer::peekInt64From]: peek error");
+    }
+    std::int64_t origin = *(std::int64_t*)(_buffer + _cur + pos);
+    
+    return Hrpc_Common::ntohInt64(origin);
+}
 
 }

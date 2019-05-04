@@ -1,6 +1,8 @@
 #ifndef OBJECT_PROXY_H_
 #define OBJECT_PROXY_H_
 
+#include <future>
+
 #include <hrpc_buffer.h>
 #include <hrpc_atomic.h>
 namespace Hrpc
@@ -18,6 +20,9 @@ class ObjectProxy
         HRPC_ONEWAY = 1,    // 单向调用请求
         HRPC_FUNC           // 正常请求
     };
+
+    using Future_Data = std::unique_ptr<Hrpc_Buffer>;
+    using WaitFuture = std::future<Future_Data>;
 public:
     /**
      * @description: 构造代理对象
@@ -45,6 +50,20 @@ public:
      * @return: 
      */
     void setWaitTime(size_t wait);
+private:
+    /**
+     * @description: 封装成一个Hrpc协议的协议体
+     * @param {type} 
+     * @return: 
+     */
+    Hrpc_Buffer makeHrpcBody(const std::string& obj, Hrpc_Buffer&& buf);
+
+    /**
+     * @description: 对于HRPC_FUNC类型的调用， 等待结果返回后返回结果
+     * @param {type} 
+     * @return: 
+     */
+    Hrpc_Buffer waitResult(WaitFuture&& fut);
 private:
     ClientNetThreadGroup*   _net;   // 网络线程组
     std::string             _object;    // 代理对象名称

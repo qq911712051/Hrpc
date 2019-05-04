@@ -58,6 +58,7 @@ class MyThread : public Hrpc_Thread
 {
     int i;
 public:
+    ~MyThread() {}
     void init(int index)
     {
         i = index;

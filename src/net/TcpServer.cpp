@@ -166,16 +166,12 @@ void TcpServer::addHandleProtocol(const std::string& object, std::unique_ptr<Hrp
 }
 
 
-void TcpServer::setHeartProtocol(const std::string& object, std::unique_ptr<Hrpc_BaseProtocol>&& protocol)
+void TcpServer::setHeartProtocol(std::unique_ptr<Hrpc_BaseProtocol>&& protocol)
 {
-    auto itr = _bindAdapterFactory.find(object);
-    if (itr != _bindAdapterFactory.end())
+    // 设置心跳协议
+    for (auto& x : _bindAdapterFactory)
     {
-        itr->second->setHeartProtocol(protocol);
-    }
-    else
-    {
-        throw Hrpc_TcpServerException("[TcpServer::setHeartProtocol]: not found BindAdapter [" + object + "]");
+        x.second->setHeartProtocol(std::move(protocol));
     }
 }
 

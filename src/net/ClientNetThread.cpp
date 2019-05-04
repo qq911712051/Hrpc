@@ -4,6 +4,7 @@
 
 #include <ClientNetThread.h>
 
+using namespace std::placeholders;
 namespace Hrpc
 {
 
@@ -173,13 +174,13 @@ void ClientNetThread::checkActivity()
                     << "], conneciton-id:" << x.second->getUid() << " idle-time over the limit" << std::endl;
 
             // 删除链接
-            _server.closeConnection(x->second->getUid());
+            _server.closeConnection(x.second->getUid());
             continue;
         }
     }
 }
 
-void ClientNetThread::recvCallback(EpollerServer* server, const ConnectionPtr& ptr)
+void ClientNetThread::recvCallback(EpollerServer* server, const ConnectionPtr& conn)
 {
     // 有新数据到来
     auto res = conn->recvData();
@@ -205,8 +206,8 @@ void ClientNetThread::recvCallback(EpollerServer* server, const ConnectionPtr& p
         if (tmp.size() != 0)
         {
             // 收到Hrpc应答包
-            auto conn = std::dynamic_pointer_cast<ClientConnection>(conn);
-            conn->parseHrpc(std::move(tmp));
+            auto clientConn = std::dynamic_pointer_cast<ClientConnection>(conn);
+            clientConn->parseHrpc(std::move(tmp));
         }
 
     } while(checkComplete);

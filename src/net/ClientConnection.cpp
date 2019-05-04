@@ -1,6 +1,7 @@
 #include <ClientConnection.h>
 #include <common.h>
 #include <HeartProtocol.h>
+#include <ClientNetThread.h>
 
 namespace Hrpc
 {
@@ -9,7 +10,7 @@ ClientConnection::ClientConnection(ClientNetThread* net, int fd, int maxWaitNum,
     _seq.init(maxWaitNum);
 }
 
-std::future<Future_Data> ClientConnection::call_func_with_future(Hrpc_Buffer&& buf)
+std::future<ClientConnection::Future_Data> ClientConnection::call_func_with_future(Hrpc_Buffer&& buf)
 {
     // 在这里进行数据的封装
     int seq = _seq.popUid();
@@ -86,7 +87,7 @@ void ClientConnection::sendRequest(Hrpc_Buffer&& msg)
 void ClientConnection::parseHrpc(Hrpc_Buffer&& msg)
 {
     // 客户端仅仅支持Hrpc
-    size_t totalHead = 1 + HrpcProtocol::getName().size();
+    size_t totalHead = 1 + HrpcProtocol::Name().size();
 
     if (msg.size() < totalHead)
     {

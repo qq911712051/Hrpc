@@ -13,6 +13,7 @@
 
 #include <hrpc_exception.h>
 #include <hrpc_config.h>
+#include <hrpc_baseProtocol.h>
 
 
 namespace Hrpc
@@ -64,7 +65,7 @@ public:
      * @param {type} 
      * @return: 
      */
-    void setHeartProtocol(const std::string& object, std::unique_ptr<Hrpc_BaseProtocol>&&);
+    void setHeartProtocol(std::unique_ptr<Hrpc_BaseProtocol>&&);
 
     /**
      * @description: 进行一些初始化操作， 申请一些资源等等

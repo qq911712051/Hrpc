@@ -10,7 +10,9 @@
 #include <hrpc_time.h>
 #include <hrpc_queue.h>
 #include <hrpc_config.h>
+#include <hrpc_serializeStream.h>
 #include <hrpc_buffer.h>
+#include <hrpc_common.h>
 using namespace Hrpc;
 
 using namespace std::chrono;
@@ -179,6 +181,97 @@ void test_buffer()
     auto s1 = buf.getToBuffer(28, 5);
     std::cout << "s1 size = " << s1.size() << ", context = " << s1.toByteString() << std::endl;
 }
+void test_buffer2()
+{
+    Hrpc_Buffer buf;
+    std::string str(116, 's');
+    buf.write(str);
+    std::cout << "" << buf.size() << std::endl;
+    buf.write(str);
+    std::cout << "" << buf.size() << std::endl;
+    buf.write(str);
+    std::cout << "" << buf.size() << std::endl;
+    buf.write(str);
+    std::cout << "" << buf.size() << std::endl;
+    buf.write(str);
+    std::cout << "" << buf.size() << std::endl;
+    
+}
+
+void test_common()
+{
+    std::int64_t res = 0x0102030405060708;
+    auto res1 = Hrpc_Common::htonInt64(res);
+    std::cout << "res1 = " << std::hex << res1 << std::endl;
+
+    auto res2 = Hrpc_Common::ntohInt64(res1);
+    std::cout << "res2 = " << std::hex << res2 << std::endl;
+}
+void print1(const std::vector<std::map<int, std::string>>& data);
+void test_serialize()
+{
+    Hrpc_Buffer buffer;
+
+    // 初始化buffer
+    Hrpc_SerializeStream serialize;
+
+    serialize.setBuffer(std::move(buffer));
+    std::vector<std::string> vec1 = {"123", "4561", "323121", "dsasadsadsad"};
+    std::vector<float> vec2 = {1.23, 1, 34, 3.434343, 4.2344};
+    std::map<int, std::string> mp1 = {{1, "123"}, {2, "222"}};
+    std::map<std::string, std::string> mp2 = {{"123", "123"},{"12", "123"},{"1", "123"}};
+
+    
+
+    std::vector<std::vector<std::string>> test1;
+    for (int i = 0 ; i < 10; i++)
+        test1.push_back(vec1);
+
+    std::map<std::string, std::vector<std::vector<std::string>>> test2;
+    test2["123"] = test1;
+    test2["123dsad"] = test1;
+    test2["12sssssss3"] = test1;
+    // serialize.write(1, std::string("hello"));
+    // serialize.write(2, Hrpc::Int64(120));
+    // serialize.write(10, vec1);
+    // serialize.write(15, vec2);
+    // serialize.write(100, mp1);
+    // serialize.write(101, mp2);
+
+    serialize.write(1, test1);
+    serialize.write(2, test2);
+
+    std::vector<std::vector<std::string>> data1;
+    std::map<std::string, std::vector<std::vector<std::string>>> data2;
+    serialize.read(1, data1);
+    serialize.read(2, data2);
+
+    for (auto& x : data1)
+    {
+        for (auto& t : x)
+        {
+            std::cout << t << "  ";
+        }
+        std::cout << std::endl;
+    }
+    std::cout << "------------------" << std::endl;
+    for (auto& mm : data2)
+    {
+        std::cout << mm.first << ": ";
+        for (auto& x : mm.second)
+        {
+            for (auto& t : x)
+            {
+                std::cout << t << "  ";
+            }
+            std::cout << std::endl;
+        }
+        std::cout << "+++++++++++++++++++++++++++++++" << std::endl;
+    }
+    
+
+}
+
 
 int main(int argc, char* argv[])
 {
@@ -208,10 +301,36 @@ int main(int argc, char* argv[])
         // 测试buffer
         test_buffer();
     }
+    else if (test == "Hrpc_Buffer2")
+    {
+        // 测试buffer
+        test_buffer2();
+    }
+    else if (test == "Hrpc_Common")
+    {
+        // 测试common
+        test_common();
+    }
+    else if (test == "Hrpc_SerializeStream")
+    {
+        // 测试serialize序列化和反序列化
+        test_serialize();
+    }
     else
     {
         std::cerr << "unknown test project" << std::endl;
     }
     
     return 0;    
+}
+
+void print1(const std::vector<std::map<int, std::string>>& data)
+{
+    for (auto& x : data)
+    {
+        for (auto& t : x)
+            std::cout << t.first << "  " << t.second << " | ";
+        std::cout << std::endl;
+    }
+    std::cout << std::endl << std::endl;
 }

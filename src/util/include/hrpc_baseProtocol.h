@@ -31,6 +31,13 @@ public:
     virtual Hrpc_Buffer parse(Hrpc_Buffer&& buf);
 
     /**
+     * @description: 获取协议的名称
+     * @param {type} 
+     * @return: 
+     */
+    virtual std::string getName() = 0;
+
+    /**
      * @description: 虚析构函数
      * @param {type} 
      * @return: 

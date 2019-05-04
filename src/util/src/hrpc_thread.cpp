@@ -73,4 +73,9 @@ void* Hrpc_Thread::enterFunc(void* ptr)
     return 0;
 }
 
+Hrpc_Thread::~Hrpc_Thread()
+{
+
+}
+
 }

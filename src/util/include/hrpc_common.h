@@ -3,6 +3,7 @@
 
 #include <sstream>
 #include <string>
+#include <cstring>
 
 #include <arpa/inet.h>
 namespace Hrpc
@@ -10,7 +11,28 @@ namespace Hrpc
 
 class Hrpc_Common
 {
+    union Check_Helper
+    {
+        int a;
+        char b;
+    };
 public:
+    /**
+     * @description: 检测是不是小端
+     * @param {type} 
+     * @return: 
+     */
+    static bool isLittleEndian()
+    {
+        Check_Helper t;
+        t.a = 1;
+        if (t.b == 1)
+        {
+            return true;
+        }
+        return false;
+    }
+
     /**
      * @description: 将字符串转化为其他数值型格式
      * @param {type} 
@@ -45,6 +67,56 @@ public:
     static std::int32_t htonInt32(std::int32_t data)
     {
         return ::htonl(data);
+    }
+
+    /**
+     * @description: 本地字节序转化为网络序   64/位整数
+     * @param {type} 
+     * @return: 
+     */
+    static std::int64_t htonInt64(std::int64_t data)
+    {
+        if (!isLittleEndian())
+        {
+            return data;
+        }
+        else
+        {
+            // 小端转化为大端
+            std::int32_t l = htonInt32(*((std::int32_t*)&data));
+            std::int32_t r = htonInt32(*((std::int32_t*)&data + 1));
+            
+            // 构造结果
+            std::int64_t res = 0;
+            ::memcpy((void*)&res, (void*)&r, sizeof(std::int32_t));
+            ::memcpy((void*)((std::int32_t*)&res + 1), (void*)&l, sizeof(std::int32_t));
+            return res;
+        }
+    }
+
+    /**
+     * @description: 网络字节序转化为本地   64/位整数
+     * @param {type} 
+     * @return: 
+     */
+    static std::int64_t ntohInt64(std::int64_t data)
+    {
+        if (!isLittleEndian())
+        {
+            return data;
+        }
+        else
+        {
+            // 小端转化为大端
+            std::int32_t l = ntohInt32(*((std::int32_t*)&data));
+            std::int32_t r = ntohInt32(*((std::int32_t*)&data + 1));
+            
+            // 构造结果
+            std::int64_t res = 0;
+            ::memcpy((void*)&res, (void*)&r, sizeof(std::int32_t));
+            ::memcpy((void*)((std::int32_t*)&res + 1), (void*)&l, sizeof(std::int32_t));
+            return res;
+        }
     }
 
     /**

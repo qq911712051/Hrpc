@@ -28,9 +28,12 @@ public:
     ~Hrpc_BufferException() {}
 };
 /**
- * @description: 自动扩容的数据缓冲区 , 非线程安全
- * @param {type} 
- * @return: 
+ * 自动扩容的数据缓冲区
+ *    所有的写入都带有flag选项，表示在写入数据时时候开启 空间优化策略， 默认开启
+ * 
+ *  某些情况下关闭， 如 进行overWrite操作时， 如果开启了空间优化策略， 可能会导致数据丢失！
+ * 
+ *  所有整形数据都以  网络字节序存在
  */
 class Hrpc_Buffer
 {
@@ -66,6 +69,15 @@ public:
      */
     ~Hrpc_Buffer();
 
+    /**
+     * @description: 在某个位置覆盖写入data 
+     * @param {type} 
+     * @return: 
+     */
+    bool overWriteInt16(size_t pos, const std::int16_t& data);
+    bool overWriteInt8(size_t pos, const std::int8_t& data);
+    bool overWriteInt32(size_t pos, const std::int32_t& data);
+    bool overWriteInt64(size_t pos, const std::int64_t& data);
 
     /**
      * @description: 以网络字节序 压入一个int值
@@ -73,14 +85,19 @@ public:
      * @return: 
      */
     bool appendFrontInt32(int data);
-    bool appendInt32(int data);
+    bool appendInt32(int data, bool flag = true);
+    bool appendFrontFloat(float data);
+    bool appendFloat(float data, bool flag = true);
+
+    bool appendFrontInt64(std::int64_t data);
+    bool appendInt64(std::int64_t data, bool flag = true);
 
 
     bool appendFrontInt8(std::int8_t data);
-    bool appendInt8(std::int8_t data);
+    bool appendInt8(std::int8_t data, bool flag = true);
 
     bool appendFrontInt16(std::int16_t data);
-    bool appendInt16(std::int16_t data);
+    bool appendInt16(std::int16_t data, bool flag = true);
 
     bool appendFront(const std::string& data);
     
@@ -90,9 +107,21 @@ public:
      * @param {type} 
      * @return: 
      */
+    std::int64_t peekFrontInt64() const;
     std::int32_t peekFrontInt32() const;
+    float peekFrontFloat() const;
     std::int16_t peekFrontInt16() const;
     std::int8_t peekFrontInt8() const;
+
+    /**
+     * @description: 从指定位置读取值 
+     * @param {type} 
+     * @return: 
+     */
+    std::int8_t peekInt8From(size_t pos) const;
+    std::int16_t peekInt16From(size_t pos) const;
+    std::int32_t peekInt32From(size_t pos) const;
+    std::int64_t peekInt64From(size_t pos) const;
     
     
     
@@ -144,18 +173,18 @@ public:
      * @param {type} 
      * @return: 
      */
-    bool write(const std::string& data);
+    bool write(const std::string& data, bool flag = true);
     
-    bool write(const char* data, int len = -1);
+    bool write(const char* data, int len = -1, bool flag = true);
 
-    bool write(const char* begin, const char* end);
+    bool write(const char* begin, const char* end, bool flag = true);
 
     /**
      * @description: 压入数据到当前缓冲区
      * @param {type} 
      * @return: 
      */
-    void pushData(Hrpc_Buffer&& buf);
+    void pushData(Hrpc_Buffer&& buf, bool flag = true);
 
     /**
      * @description: 跳过n字节数据, 将位置游标后移
@@ -208,6 +237,7 @@ public:
      */
     const char* end() const {return _buffer + _end;}
 private:
+
     /**
      * @description: 禁止拷贝以及赋值
      * @param {type} 

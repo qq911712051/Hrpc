@@ -2,6 +2,7 @@
 #define CLIENT_CONNECTION_H_
 #include <memory>
 #include <future>
+#include <map>
 
 #include <hrpc_buffer.h>
 #include <hrpc_uid.h>
@@ -17,6 +18,7 @@ class ClientNetThread;
  */
 class ClientConnection : public ConnectionBase
 {
+public:
     using Future_Data = std::unique_ptr<Hrpc_Buffer>;
     using WaitQueue = std::map<int, std::promise<Future_Data>>;
 public:

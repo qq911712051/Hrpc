@@ -122,7 +122,7 @@ Hrpc_Buffer HrpcProtocol::addProtocolHeadMsg(Hrpc_Buffer&& buf, std::int32_t seq
 
 Hrpc_Buffer HrpcProtocol::makeRequest(Hrpc_Buffer&& body, int seq, std::int8_t type)
 {
-    int headTotal = 1 + HrpcProtocol::getName().size() + 4 + 1;
+    int headTotal = 1 + HrpcProtocol::Name().size() + 4 + 1;
     if (body.beforeSize() >= headTotal)
     {
         // 压入请求类型

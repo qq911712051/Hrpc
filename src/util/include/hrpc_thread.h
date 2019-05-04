@@ -37,7 +37,8 @@ public:
      * @return: 
      */
     Hrpc_Thread() : _running(false), _tid(0) {} 
-    ~Hrpc_Thread() = 0;
+
+    virtual ~Hrpc_Thread() = 0;
 
     /**
      * @description: 新建线程并执行 
@@ -96,5 +97,6 @@ private:
     Hrpc_ThreadLock _lock;  // 保证start函数结束前， 新线程已经开始运行
 
 };
+
 }
 #endif
