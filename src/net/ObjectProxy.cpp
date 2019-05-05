@@ -6,12 +6,13 @@
 namespace Hrpc
 {
 
-ObjectProxy::ObjectProxy(ClientNetThreadGroup* group, const std::string& objName, const std::string& ip, short port)
+ObjectProxy::ObjectProxy(ClientNetThreadGroup* group, const std::string& objName, const std::string& ip, short port, size_t waitTime)
 {
     _net = group;
     _object = objName;
     _destIp = ip;
     _destPort = port;
+    _waitTime = waitTime;
 }
 
 Hrpc_Buffer ObjectProxy::involve(int type, const std::string& funcName, Hrpc_Buffer&& para)

@@ -26,7 +26,7 @@ class BindAdapter;
 class HandleThread : public Hrpc_Thread
 {
 public:
-    using Protocol = std::unique_ptr<Hrpc_BaseProtocol>;
+    using Protocol = Hrpc_BaseProtocol*;
 private:
     using ProtocolFactory = std::map<std::string, Protocol>;
 public:
@@ -65,7 +65,7 @@ public:
      * @param: protoName 协议名称 
      * @return: 
      */
-    void addHandleProtocol(Protocol&& proto, const std::string protoName);
+    void addHandleProtocol(Protocol proto, const std::string protoName);
 
 
     /**
@@ -73,7 +73,7 @@ public:
      * @param {type} 
      * @return: 
      */
-    void setHeartProtocol(Protocol&& proto);
+    void setHeartProtocol(Protocol proto);
 
     /**
      * @description: 结束此业务线程 

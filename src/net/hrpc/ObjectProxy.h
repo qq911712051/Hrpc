@@ -15,6 +15,8 @@ class ClientNetThreadGroup;
  */
 class ObjectProxy
 {
+
+protected:
     enum
     {
         HRPC_ONEWAY = 1,    // 单向调用请求
@@ -32,7 +34,7 @@ public:
      * @param: port  远程对象的端口
      * @return: 
      */
-    ObjectProxy(ClientNetThreadGroup* group, const std::string& objectName, const std::string& ip, short port);
+    ObjectProxy(ClientNetThreadGroup* group, const std::string& objectName, const std::string& ip, short port, size_t waitTime);
     
     /**
      * @description: 进行函数调用， 将请求发往网络线程

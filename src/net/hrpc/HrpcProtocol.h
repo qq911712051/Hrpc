@@ -11,7 +11,7 @@
 
 #include <hrpc_baseProtocol.h>
 
-#include <HandleBase.h>
+#include <hrpc/HandleBase.h>
 namespace Hrpc
 {
 
@@ -51,7 +51,8 @@ public:
      * @param: handle 处理对象
      * @return: 
      */
-    void setHandleObject(std::unique_ptr<HandleBase>&& handle);
+    template<typename Protocol>
+    void setHandleObject();
 
     /**
      * @description: 包装成一个Hrpc请求
@@ -99,5 +100,10 @@ private:
 
     static std::string _name;   // 协议名称
 };
+template<typename Protocol>
+void HrpcProtocol::setHandleObject()
+{
+    _handle = std::unique_ptr<HandleBase>(new Protocol);
+}
 }
 #endif

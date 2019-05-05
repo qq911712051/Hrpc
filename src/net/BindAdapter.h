@@ -114,14 +114,14 @@ public:
      * @param {type} 
      * @return: 
      */
-    void addProtocol(std::unique_ptr<Hrpc_BaseProtocol>&&);
+    void addProtocol(Hrpc_BaseProtocol*);
 
     /**
      * @description: 设置心跳协议 
      * @param {type} 
      * @return: 
      */
-    void setHeartProtocol(std::unique_ptr<Hrpc_BaseProtocol>&&);
+    void setHeartProtocol(Hrpc_BaseProtocol*);
 
     /**
      * @description: 判断业务线程是否正在运行 
@@ -144,7 +144,6 @@ private:
     
     std::vector<Handle>             _handles;           // 业务线程处理组
     int                             _threadNum;         // 业务线程数量
-
 };
 
 

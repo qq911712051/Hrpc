@@ -2,6 +2,8 @@
 
 #include <hrpc_common.h>
 
+
+#include <ClientNetThreadGroup.h>
 #include <HrpcClient.h>
 namespace Hrpc
 {
@@ -37,6 +39,10 @@ void HrpcClient::intialize()
     _netGroup->intialize(_config);
     _netGroup->start();
     
+    // 读取waitTime
+    size_t waitTime = Hrpc_Common::strto<size_t>(_config.getString("/hrpc/client/HrpcWaitTime"));
+    if (waitTime > 0)
+        _waitTime = waitTime;
     _isInitialize = true;
 }
 
@@ -70,5 +76,92 @@ bool HrpcClient::check(const std::string& objectName, std::string& object, std::
 void HrpcClient::terminate()
 {
     _netGroup->terminate();
+}
+
+ObjectProxy* HrpcClient::getObjectProxy(const std::string& objectName)
+{
+    // 初始化
+    std::call_once(_onceFlag, &HrpcClient::intialize, this);
+
+    // 是否存在
+    {
+        std::lock_guard<std::mutex> sync(_lock);
+        auto itr = _objectFactory.find(objectName);
+        if (itr != _objectFactory.end())
+        {
+            return itr->second.get();
+        }
+    }
+
+    // 分析objectName组成
+    std::string ip;
+    std::string object;
+    short port = 0;
+    bool has = check(objectName, object, ip, port);
+    if (has)
+    {
+        if (ip == "" || port <= 0)
+        {
+            throw Hrpc_Exception("[HrpcClient::getObjectProxy]: objectName format error, objectName = [" + objectName + "]");
+        }
+        // 生成新的proxy
+        auto proxy = ProxyPtr(new ObjectProxy(_netGroup, object, ip, port, _waitTime));
+        auto oPtr = proxy.get();
+        {
+            std::lock_guard<std::mutex> sync(_lock);
+            auto itr = _objectFactory.find(objectName);
+            if (itr != _objectFactory.end())
+            {
+                return itr->second.get();
+            }
+            _objectFactory[objectName] = std::move(proxy);
+        }
+        return oPtr;
+    }
+    else
+    {
+        // 查询已经存在的远端端口以及ip
+        auto& node = _config.getConfigNode("/hrpc/client/ObjectProxy");
+        // 遍历所有的proxy， 查看是否存在相关object的信息
+        for (auto& x : node->_map)
+        {
+            // 找到相关的object
+            if (x.second->_option == objectName)
+            {
+                auto& obj = x.second->_map;
+
+                ip = obj["IP"]->_value;
+                port = Hrpc_Common::strto<short>(obj["Port"]->_value);
+                
+                if (ip == "" || port <= 0)
+                {
+                    throw Hrpc_Exception("[HrpcClient::getObjectProxy]: objectProxy[" + objectName + "] config error");
+                }
+
+                auto proxy = ProxyPtr(new ObjectProxy(_netGroup, objectName, ip, port, _waitTime));
+                auto oPtr = proxy.get();
+                {
+                    std::lock_guard<std::mutex> sync(_lock);
+                    auto itr = _objectFactory.find(objectName);
+                    if (itr != _objectFactory.end())
+                    {
+                        return itr->second.get();
+                    }
+                    _objectFactory[objectName] = std::move(proxy);    
+                }
+                return oPtr;
+            }
+        }
+    }
+    
+    return nullptr;
+}
+
+HrpcClient::~HrpcClient()
+{
+    if (_netGroup)
+    {
+        delete _netGroup;
+    }
 }
 }

@@ -225,16 +225,16 @@ void ConnectionBase::setUid(int uid)
     _uid = uid;
     _lock.notify();   
 }
-void ConnectionBase::waitForUidValid()
+bool ConnectionBase::waitForUidValid(size_t timeout)
 {
     if (_uid != -1)
-        return;
+        return true;
     
     std::lock_guard<Hrpc_ThreadLock> sync(_lock);
     while (_uid == -1)
     {
-        _lock.wait();
+        return _lock.timeWait(timeout);
     }
-
+    return false;
 }
 }

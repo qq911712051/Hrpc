@@ -89,6 +89,14 @@ ClientConnectionPtr ClientNetThread::connect(const std::string& object, const st
         auto ptr = ClientConnectionPtr(new ClientConnection(this, fd, _max_wait_num));
         // 添加到epoll中
         auto basePtr = std::static_pointer_cast<ConnectionBase>(ptr);
+        addConnection(basePtr);
+        
+        // 等待同步完成, 这里可能会出现死循环， 当addConnection失败的时候， 因此加一个等待时间
+        // 等待100ms
+        if (!basePtr->waitForUidValid(100))
+        {
+            throw Hrpc_Exception("[ClientNetThread::connect]: connect error, maybe the connection is too much");
+        }
 
         // 添加到链接有效链表
         {
@@ -99,22 +107,18 @@ ClientConnectionPtr ClientNetThread::connect(const std::string& object, const st
                 // 获得相关链接
                 int uid = itr->second;
 
-                auto ptr = _server.getConnectionByUid(uid);
+                auto newPtr = _server.getConnectionByUid(uid);
                 // 判断是否有效
-                if (ptr)
+                if (newPtr)
                 {
+                    // 刚生成的链接为多余的链接,且没有使用。 可以直接关闭
+                    closeConnection(basePtr->getUid());
                     // 返回ClientConnection
-                    return std::dynamic_pointer_cast<ClientConnection>(ptr);
+                    return std::dynamic_pointer_cast<ClientConnection>(newPtr);
                 }
             }
             _list[object] = basePtr->getUid();
         }
-
-        addConnection(basePtr);
-        
-        // 等待同步完成
-        basePtr->waitForUidValid();
-
         std::cout << "[ClientNetThread::connect]: build a connetion in NetThread[" << std::this_thread::get_id() << "], connection_id = " 
                     << basePtr->getUid() << std::endl;
         
@@ -167,14 +171,16 @@ void ClientNetThread::checkActivity()
     {
         auto nowTime = Hrpc_Time::getNowTimeMs();
         
-        auto diffTime = nowTime - x.second->getLastActivityTime();
+        auto clientConn = std::dynamic_pointer_cast<ClientConnection>(x.second);
+
+        auto diffTime = nowTime - clientConn->getLastSendTime(); 
         if (diffTime > _maxIdleTime)
         {
             std::cout << "[ClientNetThread::checkActivity]: NetThread[" << std::this_thread::get_id()
-                    << "], conneciton-id:" << x.second->getUid() << " idle-time over the limit" << std::endl;
+                    << "], conneciton-id:" << clientConn->getUid() << " idle-time over the limit" << std::endl;
 
             // 删除链接
-            _server.closeConnection(x.second->getUid());
+            _server.closeConnection(clientConn->getUid());
             continue;
         }
     }
@@ -227,7 +233,11 @@ void ClientNetThread::terminate()
 ClientNetThread::~ClientNetThread()
 {
     terminate();
-    join();
+}
+
+void ClientNetThread::closeConnection(int uid)
+{
+    _server.closeConnection(uid);
 }
 
 }

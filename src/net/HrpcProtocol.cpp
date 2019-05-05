@@ -62,10 +62,6 @@ Hrpc_Buffer HrpcProtocol::parse(Hrpc_Buffer&& buf)
 }
 
 
-void HrpcProtocol::setHandleObject(std::unique_ptr<HandleBase>&& handle)
-{
-    _handle = std::move(handle);
-}
 
 bool HrpcProtocol::extractFuncName(Hrpc_Buffer&& msg, std::string& objectName, std::string& funcName)
 {
@@ -131,7 +127,7 @@ Hrpc_Buffer HrpcProtocol::makeRequest(Hrpc_Buffer&& body, int seq, std::int8_t t
         body.appendFrontInt32(seq);
         // 协议头部
         body.appendFront("HRPC");
-        body.appendInt8(4);
+        body.appendFrontInt8(4);
         
         return std::move(body);
     }
@@ -139,9 +135,9 @@ Hrpc_Buffer HrpcProtocol::makeRequest(Hrpc_Buffer&& body, int seq, std::int8_t t
     {
         Hrpc_Buffer res;
         res.appendInt8(4);
-        res.appendFront("HRPC");
-        res.appendFrontInt32(seq);
-        res.appendFrontInt8(type);
+        res.write("HRPC");
+        res.appendInt32(seq);
+        res.appendInt8(type);
         
         res.pushData(std::move(body));
         return std::move(res);

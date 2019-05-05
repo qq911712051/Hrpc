@@ -109,10 +109,10 @@ public:
 
     /**
      * @description: 等待此链接uid生效 
-     * @param {type} 
-     * @return: 
+     * @param: time  等待时间 单位ms
+     * @return: 是否正常返回 
      */
-    void waitForUidValid();
+    bool waitForUidValid(size_t timeout);
 
     /**
      * @description: 获取当前connection的uid
@@ -133,7 +133,7 @@ public:
      * @param {type} 
      * @return: 返回是否有效
      */
-    bool isValid() const {return _close;}
+    bool isValid() const {return !_close;}
 
 public:
     static std::string  _validateCode;          // 数据包结尾的验错码

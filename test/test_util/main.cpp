@@ -123,19 +123,16 @@ void test_config()
 {
 
     Hrpc_Config config;
-    config.parse("/home/abel/study/coding/2.cfg");
+    config.parse("/home/abel/study/coding/1.cfg");
     config.print();
     std::cout << "------------------------" << std::endl;
-    auto& node = config.getConfigNode("/hrpc/server/BindAdapter/");
-    
-    std::cout << "the size = " << node->_map.size() << std::endl;
-    for (auto& x : node->_map)
+    int threadNum = Hrpc_Common::strto<int>("/hrpc/client/HrpcWaitTime");
+    if (threadNum <= 0)
     {
-        std::cout << "****************" << std::endl;
-        for (auto& s : x.second->_map)
-            std::cout << s.second->_option << ":" << s.second->_value << std::endl;
-        std::cout << "****************" << std::endl;
+        std::cerr << "[ClientNetThreadGroup::intialize]: not found ThreadNum config, set default = 1" << std::endl;
+        threadNum = 1;
     }
+    std::cout << "[ClientNetThreadGroup::intialize]: intialize the client netThread number is " << threadNum << std::endl;
 
 }
 

@@ -57,6 +57,14 @@ public:
      * @return: 
      */
     void parseHrpc(Hrpc_Buffer&& msg);
+
+
+    /**
+     * @description: 获取当前链接， 最后一次发送请求的时间
+     * @param {type} 
+     * @return: 
+     */
+    size_t getLastSendTime() const;
 private:
     /**
      * @description: 添加网络包头部后发往网络线程
@@ -84,6 +92,8 @@ private:
     UidGenarator        _seq;       // 用来生成seq序列号
 
     WaitQueue           _waitQueue; // 等待队列
+
+    size_t              _lastSendTime = {0}; // 最后发送Hrpc请求的时间
 
     std::mutex          _lock;      // 保护等待队里的线程安全
     

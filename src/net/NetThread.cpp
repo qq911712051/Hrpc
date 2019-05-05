@@ -80,7 +80,9 @@ void NetThread::initialize()
         
         // 添加定时任务
         // 心跳检测
-        _server.addTimerTaskRepeat(0, _heartTime, &NetThread::HeartCheckTask, this);
+
+        // TODO: 试验一下
+        // _server.addTimerTaskRepeat(0, _heartTime, &NetThread::HeartCheckTask, this);
 
 
     }
@@ -224,17 +226,17 @@ void NetThread::readEvent(EpollerServer* server, const ConnectionPtr& conn)
 {
     // 有新数据到来
     auto res = conn->recvData();
+    bool isClose = false;
     if (res == -1)
     {
         // 对端关闭
-        closeConnection(conn->getUid());
-        std::cout << "[NetThread::readEvent]: NetThread[" << std::this_thread::get_id()
-                            << "], conneciton-id:" << conn->getUid() << " recv 0 bytes data, close connection" << std::endl;
+        //做一个 关闭connection的标识， 这里不能直接关闭， 否则无法后面无法读取已经获得的数据
+        isClose = true;
+        
     }
     else if (res == -2)
     {
-        closeConnection(conn->getUid());
-        std::cerr << "[NetThread::readEvent]: recv return -2 and errno = " << errno << std::endl;
+        isClose = true;
     }
 
     // 检测收到包的 完整性
@@ -252,6 +254,14 @@ void NetThread::readEvent(EpollerServer* server, const ConnectionPtr& conn)
         }
 
     } while(checkComplete);
+
+    // 判断是否需要关闭链接
+    if (isClose)
+    {
+        closeConnection(conn->getUid());
+        std::cout << "[NetThread::readEvent]: NetThread[" << std::this_thread::get_id()
+                            << "], conneciton-id:" << conn->getUid() << " recv 0 bytes data, close connection" << std::endl;
+    }
 }
 
 NetThread::~NetThread()

@@ -9,7 +9,9 @@
 #define HRPC_TCPSERVER_H_
 
 #include <string>
+#include <memory>
 #include <map>
+#include <vector>
 
 #include <hrpc_exception.h>
 #include <hrpc_config.h>
@@ -125,7 +127,7 @@ private:
 
     bool            _terminate = {false}; // 停止运行
     
-    
+    std::vector<std::unique_ptr<Hrpc_BaseProtocol>> _protocolVec;   // 保存用户定义的协议
 };
 
 }

@@ -3,7 +3,7 @@ project("Hrpc_API")
 
 # 安装相关接口到 对应位置
 install(DIRECTORY ./ 
-        DESTINATION hrpc/include/net
+        DESTINATION hrpc/include/hrpc
         FILES_MATCHING PATTERN "*.h")
 
 

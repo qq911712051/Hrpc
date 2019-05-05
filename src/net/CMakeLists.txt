@@ -3,11 +3,11 @@ project (Hrpc_Net)
 
 
 
-add_subdirectory("interface")
+add_subdirectory("hrpc")
 
 # 包含util头文件 以及 接口相关头文件
 include_directories("../util/include")
-include_directories("./interface")
+include_directories("./hrpc")
 include_directories("./")
 
 aux_source_directory(. core_src_list)    

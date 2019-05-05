@@ -156,7 +156,8 @@ void TcpServer::addHandleProtocol(const std::string& object, std::unique_ptr<Hrp
     auto itr = _bindAdapterFactory.find(object);
     if (itr != _bindAdapterFactory.end())
     {
-        itr->second->addProtocol(std::move(protocol));
+        itr->second->addProtocol(protocol.get());
+        _protocolVec.push_back(std::move(protocol));
     }
     else
     {
@@ -171,8 +172,9 @@ void TcpServer::setHeartProtocol(std::unique_ptr<Hrpc_BaseProtocol>&& protocol)
     // 设置心跳协议
     for (auto& x : _bindAdapterFactory)
     {
-        x.second->setHeartProtocol(std::move(protocol));
+        x.second->setHeartProtocol(protocol.get());
     }
+    _protocolVec.push_back(std::move(protocol));
 }
 
 }

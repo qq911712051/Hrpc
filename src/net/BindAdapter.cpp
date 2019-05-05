@@ -140,18 +140,18 @@ bool BindAdapter::isRunning()
     return true;
 }
 
-void BindAdapter::addProtocol(std::unique_ptr<Hrpc_BaseProtocol>&& protocol)
+void BindAdapter::addProtocol(Hrpc_BaseProtocol* protocol)
 {
     for (auto& handle : _handles)
     {
-        handle->addHandleProtocol(std::move(protocol), protocol->getName());
+        handle->addHandleProtocol(protocol, protocol->getName());
     }
 }
-void BindAdapter::setHeartProtocol(std::unique_ptr<Hrpc_BaseProtocol>&& protocol)
+void BindAdapter::setHeartProtocol(Hrpc_BaseProtocol* protocol)
 {
     for (auto& handle : _handles)
     {
-        handle->setHeartProtocol(std::move(protocol));
+        handle->setHeartProtocol(protocol);
     }
 }
 

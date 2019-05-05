@@ -259,7 +259,8 @@ void EpollerServer::addConnection(const ConnectionPtr& conn)
     auto id = _uidGen.popUid();
     if (id < 0)
     {
-        std::cerr << "[EpollerServer::addConnection]: uid is not enough" << std::endl;
+        std::cerr << "[EpollerServer::addConnection]: connection is too much" << std::endl;
+        return;
     }
 
     // 将当前链接添加到ep监听中

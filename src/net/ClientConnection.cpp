@@ -8,18 +8,33 @@ namespace Hrpc
 ClientConnection::ClientConnection(ClientNetThread* net, int fd, int maxWaitNum, int bufferlen) : ConnectionBase(fd, bufferlen), _thread(net)
 {  
     _seq.init(maxWaitNum);
+    _lastSendTime = Hrpc_Time::getNowTimeMs();
+}
+
+ClientConnection::~ClientConnection()
+{
+    
 }
 
 std::future<ClientConnection::Future_Data> ClientConnection::call_func_with_future(Hrpc_Buffer&& buf)
 {
     // 在这里进行数据的封装
     int seq = _seq.popUid();
+    while (seq < 0)
+    {
+        // 如果等待队列已满， 则等待10ms
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        seq = _seq.popUid();
+    }
 
     // 封装成一个Hrpc请求
     Hrpc_Buffer msg = HrpcProtocol::makeRequest(std::move(buf), seq, HrpcProtocol::HRPC_REQUEST);
     
     // 加入网络包头后发往网络线程
     sendRequest(std::move(msg));
+    
+    // 更新最后的请求时间
+    _lastSendTime = Hrpc_Time::getNowTimeMs();
     
     // 生成future
     std::promise<Future_Data> pro;
@@ -40,11 +55,20 @@ void ClientConnection::call_func(Hrpc_Buffer&& buf)
     // 在这里进行数据的封装
     int seq = _seq.popUid();
 
+    while (seq < 0)
+    {
+        // 如果等待队列已满， 则等待10ms
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        seq = _seq.popUid();
+    }
     // 封装成一个Hrpc请求
     Hrpc_Buffer msg = HrpcProtocol::makeRequest(std::move(buf), seq, HrpcProtocol::HRPC_ONEWAY);
     
     // 加入网络包头后发往网络线程
     sendRequest(std::move(msg));
+
+    // 更新最后的请求时间
+    _lastSendTime = Hrpc_Time::getNowTimeMs();
 }
 
 void ClientConnection::sendRequest(Hrpc_Buffer&& msg)
@@ -172,9 +196,11 @@ void ClientConnection::processHrpc(Hrpc_Buffer&& msg)
         {
             // 设置promise的值
             itr->second.set_value(Future_Data(new Hrpc_Buffer(std::move(msg))));
+            
             // 从wait队列中删除
             _waitQueue.erase(itr);
-
+            // 归还seq
+            _seq.pushUid(seq);
             succ = true;
         }
         else
@@ -191,6 +217,11 @@ void ClientConnection::processHrpc(Hrpc_Buffer&& msg)
         std::cerr << "[ClientConnection::processHrpc]: error hrpc package format, protocol-sequence param = " << seq << ", not found wait future"<< std::endl;
     }
     
+}
+
+size_t ClientConnection::getLastSendTime() const
+{
+    return _lastSendTime;
 }
     
 }

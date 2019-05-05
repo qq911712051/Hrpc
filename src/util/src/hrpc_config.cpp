@@ -48,8 +48,6 @@ void Hrpc_Config::parse(const std::string& file)
         // 压入到有效数据中
         data.append(buffer);
     }
-    std::cout << data << std::endl;
-    // data.append(buffer);
     // 解析
     _config = parseString(data);
 }

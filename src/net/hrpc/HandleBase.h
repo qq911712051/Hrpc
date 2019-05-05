@@ -28,7 +28,7 @@ public:
      */
     virtual std::string getObjectName() const = 0;
 
-    virtual ~HandleBase() = 0;
+    virtual ~HandleBase() {}
 };
 }
 #endif

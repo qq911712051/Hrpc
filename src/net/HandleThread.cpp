@@ -12,9 +12,9 @@ HandleThread::HandleThread(BindAdapter* bind) : _bindAdapter(bind)
     
 }
 
-void HandleThread::setHeartProtocol(Protocol&& proto)
+void HandleThread::setHeartProtocol(Protocol proto)
 {
-    _protoFactory["HEART"] = std::move(proto);
+    _protoFactory["HEART"] = proto;
 }
 
 void HandleThread::intialize()
@@ -140,13 +140,13 @@ HandleThread::~HandleThread()
     terminate();
 }
 
-void HandleThread::addHandleProtocol(Protocol&& proto, const std::string protoName)
+void HandleThread::addHandleProtocol(Protocol proto, const std::string protoName)
 {
     // 寻找协议是否存在
     auto itr = _protoFactory.find(protoName);
-    if (itr != _protoFactory.end())
+    if (itr == _protoFactory.end())
     {
-        _protoFactory[protoName] = std::move(proto);
+        _protoFactory[protoName] = proto;
     }
     else
     {
