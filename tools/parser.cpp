@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cassert>
 
 #include <hrpc_exception.h>
 #include <hrpc_common.h>
@@ -66,7 +67,7 @@ std::string Parser::gernarateSwitchCase(const std::string& funcName, const Param
 {
     std::string retData;
     // 申明所有的变量
-    retData += pre + retType._typeName + " ret\n"; 
+    retData += pre + retType._typeName + " ret;\n"; 
     for (int i = 0; i < paraList.size(); i++)
     {
         FuncParam x = paraList[i];
@@ -116,7 +117,7 @@ std::string Parser::gernarateFunctionClient(const std::string& objName, const st
     std::string prefix = "\t";
 
     resData += retType._typeName + " ";      // 添加返回值
-    resData += objName + "::";              // 添加对象域
+    // resData += objName + "::";              // 添加对象域
     resData += funcName + "(";              // 添加函数名
     
     decodeFuncParam(resData, paraList);     // 添加函数参数
@@ -161,7 +162,7 @@ std::string Parser::gernarateFunctionServer(const std::string& objName, const st
     std::string prefix = "\t";
 
     resData += "virtual " + retType._typeName + " ";      // 添加返回值
-    resData += objName + "::";              // 添加对象域
+    // resData += objName + "::";              // 添加对象域
     resData += funcName + "(";              // 添加函数名
     
     decodeFuncParam(resData, paraList);     // 添加函数参数
@@ -215,19 +216,15 @@ std::string Parser::transferClass(const std::vector<ScannerToken>& tokens, int s
 
     // 转化出服务端代码
     std::string serverClassCode = transferClassForServer(tokens, start, end);
-
-    std::cout << "------------------------------------------" << std::endl;
-    std::cout << clientClassCode << std::endl;
-    std::cout << "------------------------------------------" << std::endl;
-    std::cout << serverClassCode << std::endl;
-    std::cout << "------------------------------------------" << std::endl;
-    return "";
+    
+    return clientClassCode + "\n\n\n" + serverClassCode;
 }
 
 std::string Parser::transferClassForClient(const std::vector<ScannerToken>& tokens, int start, int end)
 {
     std::string resData;
     std::string objName = tokens[start+1].value;
+    objName += "Proxy";
     
     int cur = start + 3;
     while (cur < end)
@@ -321,6 +318,8 @@ std::string Parser::transferClassForServer(const std::vector<ScannerToken>& toke
     classData += "\t}\n";
     classData += "\treturn Hrpc_Buffer();\n";
     classData += "}\n";
+
+    classData += "};\n";
 
     // 返回生成的代码
     return classData;
@@ -619,9 +618,61 @@ int Parser::loadParaType(const std::vector<ScannerToken>& tokens, int start, Par
     return -1;
 }
 
+std::string Parser::gernarateFileCode(const std::string& data, const std::string& nameSpace, const std::string& headFileMacro)
+{
+    std::string file;
+    // 添加头部说明
+    file += "/****************************************************************\n";
+    file += "* 此文件由转译器自动生成， 请勿随意进行修改\n";
+    file += "*****************************************************************/ \n";
+
+    file += "#ifndef " + headFileMacro + "\n";
+    file += "#define " + headFileMacro + "\n";
+
+    // 具体的内容
+    file += "#include <algorithm>\n";
+    file += "#include <hrpc_serializeStream.h>\n";
+    file += "#include <hrpc/HandleBase.h>\n";
+    file += "#include <hrpc/HrpcProtocol.h>\n";
+    file += "#include <hrpc/ObjectProxy.h>\n";
+    file += "using namespace Hrpc;\n";
+
+
+    // 添加域空间
+    file += "namespace " + nameSpace + "\n";
+    file += "{\n";
+
+    // 添加具体的类的实现
+    file += "\n" + data + "\n";
+
+    file += "}\n";
+    file += "#endif\n";
+    return file;
+}
+
 std::string Parser::parse(const std::vector<ScannerToken>& tokens)
 {
     int cur = 0;
+
+    std::string data;
+    std::string nameSpace;
+    std::string macroName;
+
+    // 找出namespace
+    assert(tokens.size() >= 3);
+    if (!(tokens[0].type == TOKEN_NAMESPACE && tokens[1].type == TOKEN_ID && tokens[2].type == TOKEN_SEMICOLON))
+    {
+        throw Hrpc_Exception("[Parser::parse]: occur error, the first token is not namespace");
+    }
+    nameSpace = tokens[1].value;
+    macroName = "_" + nameSpace;
+    // 查看是否有其他的namespace
+    int np = findToken(tokens, 1, TOKEN_NAMESPACE);
+    if (np >= 0)
+    {
+        throw Hrpc_Exception("[Parser::parse]: occur error, multiple namespace");
+    }
+    
     while (cur < tokens.size())
     {
         int pos = findToken(tokens, cur, TOKEN_CLASS);
@@ -633,19 +684,24 @@ std::string Parser::parse(const std::vector<ScannerToken>& tokens)
         {
             throw Hrpc_Exception("[Parser::parse]: class error, pos = " + Hrpc_Common::tostr(pos));
         }
-
+        // 记录出现的class名称
+        macroName += "_" + tokens[pos + 1].value;
         int pos2 = findToken(tokens, pos, TOKEN_BRA_3_CL);
         if (pos2 < 0)
         {
             throw Hrpc_Exception("[Parser::parse]: class error, pos = " + Hrpc_Common::tostr(pos));
         }
         
-        std::string data = transferClass(tokens, pos, pos2);
-        std::cout << data << std::endl;
-
+        data += transferClass(tokens, pos, pos2);
         cur = pos2;
     }
-    return "";
+    macroName += "_H_";
+    macroName = Hrpc_Common::toUpper(macroName);
+    // 添加文件头部相关内容
+    auto fileData = gernarateFileCode(data, nameSpace, macroName);
+    return fileData;
 }
+
+
 
 }

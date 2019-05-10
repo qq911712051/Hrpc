@@ -5,7 +5,7 @@
 #include <hrpc_common.h>
 
 #include <HelloWorld.h>
-class HelloWorldImp : public HelloWorld
+class HelloWorldImp : public Hehe::HelloWorld
 {
 
 public:

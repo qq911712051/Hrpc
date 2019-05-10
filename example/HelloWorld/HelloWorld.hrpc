@@ -1,0 +1,6 @@
+namespace Hehe;
+
+class HelloWorld
+{
+    Int32 test_hello(string name, out string outName);
+};

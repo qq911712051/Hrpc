@@ -13,7 +13,7 @@ int test(HrpcClient& client)
     bool stop = false;
     auto task = [&client, &stop]() {
 
-        auto proxy = client.stringToProxy<HelloWorldProxy>("HelloWorld");
+        auto proxy = client.stringToProxy<Hehe::HelloWorldProxy>("HelloWorld");
         
         while (!stop)
         {

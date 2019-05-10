@@ -11,8 +11,8 @@
 
 
 例如下面格式
-namespace Hehe
-{
+namespace Hehe;			// 一定要在最开头
+
 class HelloWorld
 {
 	Int32 test_hello(string name, out Int32 abs);
@@ -24,4 +24,6 @@ class NiceOject
 	vector<string> getString(Int32 count);
 
 };
-}
+
+注释只支持单行注释 #
+

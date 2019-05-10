@@ -168,6 +168,13 @@ private:
      * @return: 
      */
     static void parseFuncBody(const std::vector<ScannerToken>& tokens, int start, int end, ParamType& retType, std::string& funcName, std::vector<FuncParam>& paraList);
+
+    /**
+     * @description: 生成文件代码
+     * @param {type} 
+     * @return: 
+     */
+    static std::string gernarateFileCode(const std::string& data, const std::string& nameSpace, const std::string& headFileMacro);
 };
 }
 #endif

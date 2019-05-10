@@ -11,7 +11,10 @@ include_directories("./")
 link_directories("/usr/local/hrpc/libstatic")
 
 set(SRC_LIST scanner.cpp main.cpp parser.cpp)
-add_executable(test ${SRC_LIST})
+add_executable(parser ${SRC_LIST})
 
-target_link_libraries(test hrpc_util)
+target_link_libraries(parser hrpc_util)
+
+install(TARGETS parser
+       DESTINATION hrpc/tools)
 

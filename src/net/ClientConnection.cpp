@@ -30,8 +30,6 @@ std::future<ClientConnection::Future_Data> ClientConnection::call_func_with_futu
     // 封装成一个Hrpc请求
     Hrpc_Buffer msg = HrpcProtocol::makeRequest(std::move(buf), seq, HrpcProtocol::HRPC_REQUEST);
     
-    // 加入网络包头后发往网络线程
-    sendRequest(std::move(msg));
     
     // 更新最后的请求时间
     _lastSendTime = Hrpc_Time::getNowTimeMs();
@@ -45,6 +43,8 @@ std::future<ClientConnection::Future_Data> ClientConnection::call_func_with_futu
         std::lock_guard<std::mutex> sync(_lock);
         _waitQueue[seq] = std::move(pro);
     }
+    // 加入网络包头后发往网络线程
+    sendRequest(std::move(msg));
 
     // 返回对应的future
     return fut;

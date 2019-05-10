@@ -148,6 +148,13 @@ public:
     {
         return ::ntohs(data);
     }
+
+    /**
+     * @description: 将传入的数据中， 所有的小写字母变为大写
+     * @param {type} 
+     * @return: 
+     */
+    static std::string toUpper(const std::string& data);
 };
 
 template<typename Obj>
@@ -170,5 +177,7 @@ std::string Hrpc_Common::tostr(Obj o)
     ss >> res;
     return res;
 }
+
+
 }
 #endif
