@@ -1,0 +1,27 @@
+1. 这个文件夹 主要是转译器的 代码     , 写的简直是垃圾中的战斗机
+
+2. 为了赶速度， 这个文件夹下面代码全是乱写， 应该会有一堆bug
+
+3. 基本上没有考虑边界条件， 也就是说当你的接口定义语法正确的时候， 能保证生成正确的c++代码，
+   如果你的接口语法错误、、、极有可能程序core掉(大部分情况下还是会抛异常的...) 
+
+4. 因为没有使用正规的语法分析树， 所以转译器扩展性为0.。。。。 
+
+5. 还未开发完成..
+
+
+例如下面格式
+namespace Hehe
+{
+class HelloWorld
+{
+	Int32 test_hello(string name, out Int32 abs);
+	vector<string> niceTest(map<string, Int32> ma, out string mb);
+};
+
+class NiceOject
+{
+	vector<string> getString(Int32 count);
+
+};
+}

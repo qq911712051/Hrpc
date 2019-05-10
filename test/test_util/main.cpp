@@ -8,6 +8,7 @@
 #include <hrpc_ptr.h>
 #include <hrpc_timer.h>
 #include <hrpc_time.h>
+#include <hrpc_shm.h>
 #include <hrpc_queue.h>
 #include <hrpc_config.h>
 #include <hrpc_serializeStream.h>
@@ -269,6 +270,27 @@ void test_serialize()
 
 }
 
+void test_shm()
+{
+    Hrpc_Shm shm;
+    ::key_t key = ::ftok("./", 'a');
+    std::cout << "key = " << key << std::endl;
+
+    try
+    {
+        auto addr = shm.connect(key);
+        std::cout << "addr = " << addr << std::endl;
+        std::cout << "size = " << shm.getShmSize() << std::endl;
+        std::cout << "id = " << shm.getShmId() << std::endl;
+
+    }
+    catch(const Hrpc_Exception& e)
+    {
+        std::cerr << "exception: " << e.what() << ", errno = " << e.getErrCode() << '\n';
+    }
+    
+
+}
 
 int main(int argc, char* argv[])
 {
@@ -312,6 +334,11 @@ int main(int argc, char* argv[])
     {
         // 测试serialize序列化和反序列化
         test_serialize();
+    }
+    else if (test == "Hrpc_Shm")
+    {
+        // 测试共享内存
+        test_shm();
     }
     else
     {

@@ -1,0 +1,1 @@
+/usr/bin/c++   -g  -std=c++11   -rdynamic CMakeFiles/test.dir/scanner.cpp.o CMakeFiles/test.dir/main.cpp.o CMakeFiles/test.dir/parser.cpp.o  -o bin/tools/test  -L/usr/local/hrpc/libstatic -Wl,-rpath,/usr/local/hrpc/libstatic -lhrpc_util 
