@@ -192,6 +192,14 @@ std::string Parser::gernarateSwitchCode(const std::vector<ServerFuncResult>& vec
 
         retData += newPre + "}\n";   
     }
+    // 添加default情况
+    retData += newPre + "default:\n";
+    retData += newPre + "{\n";
+
+    // 抛异常
+    retData += newPre + "\tthrow Hrpc_Exception(\" unknown funcName = [\" + funcName + \"]\");\n"; 
+    retData += newPre + "}\n";   
+
     retData += pre + "};\n";
     return retData;
 }

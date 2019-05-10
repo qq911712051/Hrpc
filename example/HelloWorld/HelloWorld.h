@@ -73,6 +73,10 @@ Hrpc_Buffer distribute(const std::string& funcName, Hrpc_Buffer&& msg) override
 				s.write(2, outName);
 				return std::move(s.getBuffer());
 			}
+			default:
+			{
+				throw Hrpc_Exception(" unknown funcName = [" + funcName + "]");
+			}
 		};
 	}
 	else
