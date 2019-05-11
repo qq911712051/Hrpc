@@ -11,7 +11,7 @@ gcc:   4.9+ (支持c++11)
 
     2. 编译Hrpc项目
         # cd build
-        # cmake ../src
+        # cmake ../
         # make 
     
     3. 安装到相关目录
@@ -22,4 +22,4 @@ gcc:   4.9+ (支持c++11)
 使用方法：
     1. 编写hrpc接口描述文件
     2. 通过tools中的parser转译器 将接口语言 转化为 c++语言
-    3. 服务端实现相应的接口即可
+    3. 服务端实现相应的接口即可, example/HelloWorld 详见具体用法

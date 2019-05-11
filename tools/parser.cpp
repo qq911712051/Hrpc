@@ -43,7 +43,7 @@ void Parser::decodeFuncParam(std::string& resData, const std::vector<FuncParam>&
                 }
                 else
                 {
-                    resData += ", const" + x._type._typeName + "& " + x._name;
+                    resData += ", const " + x._type._typeName + "& " + x._name;
                 }
             }
             
@@ -632,6 +632,9 @@ std::string Parser::gernarateFileCode(const std::string& data, const std::string
     // 添加头部说明
     file += "/****************************************************************\n";
     file += "* 此文件由转译器自动生成， 请勿随意进行修改\n";
+    file += "* 转译器版本:1.0\n";
+    file += "* 作者: BlackStar0412\n";
+    file += "* github: https://github.com/qq911712051/Hrpc\n";
     file += "*****************************************************************/ \n";
 
     file += "#ifndef " + headFileMacro + "\n";
