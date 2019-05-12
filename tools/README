@@ -1,18 +1,29 @@
-1. 这个文件夹 主要是转译器的 代码     , 写的简直是垃圾中的战斗机
+1. 这个文件夹 主要是转译器的 代码   
 
 2. 为了赶速度， 这个文件夹下面代码全是乱写， 应该会有一堆bug
 
 3. 基本上没有考虑边界条件， 也就是说当你的接口定义语法正确的时候， 能保证生成正确的c++代码，
-   如果你的接口语法错误、、、极有可能程序core掉(大部分情况下还是会抛异常的...) 
+   如果你的接口语法错误、、、可能程序内存越界(大部分情况下还是会抛异常的...) 
 
-4. 因为没有使用正规的语法分析树， 所以转译器扩展性为0.。。。。 
+4. 因为没有使用正规的语法分析树， 所以转译器扩展性为0(自己改起来都麻烦的要死)
 
 5. 还未开发完成..
 
+语法： 目前仅支持class的翻译， 不支持enum和自定义struct
 
-例如下面格式
-namespace Hehe;			// 一定要在最开头
+支持的类型如下： Int8  Int16  Int32	Int64	bool	float	string	vector	map
+其中vector的格式, 例如
+	vector<Int32>
 
+map格式如下， 例如
+	map<Int32, vector<string>>
+  	其中 第一个元素必须为简单类型， 如 Int8  Int16  Int32	Int64	bool	float	string
+            第二个元素可以为简单类型或者复杂类型, 如vector map等
+
+
+接口文件实例：
+
+namespace Hehe;  # 接口文件的开头一定要定义namespace, 并且一个接口文件仅能允许有一个namespace
 class HelloWorld
 {
 	Int32 test_hello(string name, out Int32 abs);
